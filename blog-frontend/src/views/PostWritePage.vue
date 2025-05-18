@@ -1,188 +1,257 @@
 <template>
-  <div class="tistory-editor">
-    <!-- 상단 내비게이션 바 -->
-    <div class="editor-header">
-      <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center py-2">
-          <div>
-            <span class="logo">tistory</span>
+  <div>
+    <!-- Page Header-->
+    <header class="masthead" :style="{ backgroundImage: `url('${backgroundImage}')` }">
+      <div class="container position-relative px-4 px-lg-5">
+        <div class="row gx-4 gx-lg-5 justify-content-center">
+          <div class="col-md-10 col-lg-8 col-xl-7">
+            <div class="site-heading">
+              <h1>글쓰기</h1>
+              <span class="subheading">블로그에 새 글을 작성합니다</span>
+            </div>
           </div>
-          <div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 메인 에디터 영역 -->
+    <div class="container px-4 px-lg-5">
+      <!-- Alert Messages -->
+      <div v-if="errorMessage" class="alert alert-danger">
+        {{ errorMessage }}
+      </div>
+      <div v-if="successMessage" class="alert alert-success">
+        {{ successMessage }}
+      </div>
+
+      <div class="row gx-4 gx-lg-5">
+        <!-- 왼쪽 에디터 영역 -->
+        <div class="col-md-8">
+          <div class="card mb-4">
+            <div class="card-body">
+              <!-- 제목 입력 -->
+              <div class="mb-3">
+                <input 
+                  type="text" 
+                  class="form-control form-control-lg border-0" 
+                  id="title" 
+                  v-model="postForm.title" 
+                  placeholder="제목을 입력하세요" 
+                  required
+                >
+              </div>
+              
+              <!-- 에디터 툴바 -->
+              <div class="editor-toolbar d-flex border-top border-bottom py-1 mb-3">
+                <div class="btn-toolbar flex-wrap" role="toolbar">
+                  <!-- 글꼴 설정 -->
+                  <div class="btn-group me-2" role="group">
+                    <select class="form-select form-select-sm" @change="formatFont($event.target.value)">
+                      <option value="">글꼴</option>
+                      <option value="Arial">Arial</option>
+                      <option value="Verdana">Verdana</option>
+                      <option value="Helvetica">Helvetica</option>
+                      <option value="Times New Roman">Times New Roman</option>
+                      <option value="Courier New">Courier New</option>
+                      <option value="맑은 고딕">맑은 고딕</option>
+                      <option value="나눔고딕">나눔고딕</option>
+                    </select>
+                  </div>
+                  
+                  <div class="btn-group me-2" role="group">
+                    <select class="form-select form-select-sm" @change="formatHeading($event.target.value)">
+                      <option value="">본문</option>
+                      <option value="h2">제목 1</option>
+                      <option value="h3">제목 2</option>
+                      <option value="h4">제목 3</option>
+                    </select>
+                  </div>
+                  
+                  <!-- 텍스트 서식 -->
+                  <div class="btn-group me-2" role="group">
+                    <button @click.prevent="formatDoc('bold')" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-bold"></i>
+                    </button>
+                    <button @click.prevent="formatDoc('italic')" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-italic"></i>
+                    </button>
+                    <button @click.prevent="formatDoc('underline')" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-underline"></i>
+                    </button>
+                    <button @click.prevent="formatDoc('strikeThrough')" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-strikethrough"></i>
+                    </button>
+                  </div>
+                  
+                  <!-- 텍스트 정렬 -->
+                  <div class="btn-group me-2" role="group">
+                    <button @click.prevent="formatDoc('justifyLeft')" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-align-left"></i>
+                    </button>
+                    <button @click.prevent="formatDoc('justifyCenter')" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-align-center"></i>
+                    </button>
+                    <button @click.prevent="formatDoc('justifyRight')" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-align-right"></i>
+                    </button>
+                  </div>
+                  
+                  <!-- 목록 -->
+                  <div class="btn-group me-2" role="group">
+                    <button @click.prevent="formatDoc('insertUnorderedList')" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-list-ul"></i>
+                    </button>
+                    <button @click.prevent="formatDoc('insertOrderedList')" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-list-ol"></i>
+                    </button>
+                  </div>
+                  
+                  <!-- 링크 및 이미지 -->
+                  <div class="btn-group me-2" role="group">
+                    <button @click.prevent="insertLink()" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-link"></i>
+                    </button>
+                    <button @click.prevent="insertImage()" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-image"></i>
+                    </button>
+                    <button @click.prevent="insertTable()" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-table"></i>
+                    </button>
+                    <button @click.prevent="insertHr()" type="button" class="btn btn-sm btn-outline-secondary">
+                      <i class="fas fa-minus"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 에디터 콘텐츠 영역 -->
+              <div 
+                id="editor-content" 
+                class="editor-content"
+                contenteditable="true"
+                @input="handleEditorInput"
+                ref="editorContent"
+              ></div>
+            </div>
+          </div>
+          
+          <!-- 버튼 영역 -->
+          <div class="d-flex justify-content-end mb-4">
             <button 
               type="button" 
-              class="btn btn-sm btn-outline-secondary me-2" 
+              class="btn btn-outline-secondary me-2" 
               @click="$router.push('/')"
             >
               취소
             </button>
             <button 
               type="button" 
-              class="btn btn-sm btn-dark" 
+              class="btn btn-outline-primary me-2" 
+              @click="saveAsDraft"
+              :disabled="isSubmitting"
+            >
+              임시저장
+            </button>
+            <button 
+              type="button" 
+              class="btn btn-primary" 
               @click="submitPost"
               :disabled="isSubmitting"
             >
               <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-              완료
+              발행
             </button>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 메인 에디터 영역 -->
-    <div class="editor-content-wrapper">
-      <div class="container-fluid px-4 py-3">
-        <!-- Alert Messages -->
-        <div v-if="errorMessage" class="alert alert-danger">
-          {{ errorMessage }}
-        </div>
-        <div v-if="successMessage" class="alert alert-success">
-          {{ successMessage }}
-        </div>
-
-        <!-- 카테고리 선택 -->
-        <div class="mb-3">
-          <select 
-            class="form-select form-select-sm w-auto" 
-            id="category" 
-            v-model="postForm.category" 
-            required
-          >
-            <option value="" disabled selected>카테고리</option>
-            <option 
-              v-for="category in categories" 
-              :key="category.id" 
-              :value="category.id"
-            >
-              {{ category.name }}
-            </option>
-          </select>
-        </div>
         
-        <!-- 제목 입력 -->
-        <div class="title-input mb-3">
-          <input 
-            type="text" 
-            class="form-control form-control-lg border-0" 
-            id="title" 
-            v-model="postForm.title" 
-            placeholder="제목을 입력하세요" 
-            required
-          >
-        </div>
-        
-        <!-- 에디터 툴바 -->
-        <div class="editor-toolbar mb-2 d-flex border-top border-bottom py-1">
-          <div class="btn-toolbar flex-wrap" role="toolbar">
-            <!-- 글꼴 설정 -->
-            <div class="btn-group me-3" role="group">
-              <button type="button" class="btn btn-sm btn-toolbar">본문</button>
-            </div>
-            
-            <!-- 텍스트 서식 -->
-            <div class="btn-group me-3" role="group">
-              <button @click.prevent="formatDoc('bold')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="bold" />
-              </button>
-              <button @click.prevent="formatDoc('italic')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="italic" />
-              </button>
-              <button @click.prevent="formatDoc('underline')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="underline" />
-              </button>
-              <button @click.prevent="formatDoc('strikeThrough')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="strikethrough" />
-              </button>
-            </div>
-            
-            <!-- 텍스트 정렬 -->
-            <div class="btn-group me-3" role="group">
-              <button @click.prevent="formatDoc('justifyLeft')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="align-left" />
-              </button>
-              <button @click.prevent="formatDoc('justifyCenter')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="align-center" />
-              </button>
-              <button @click.prevent="formatDoc('justifyRight')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="align-right" />
-              </button>
-            </div>
-            
-            <!-- 목록 -->
-            <div class="btn-group me-3" role="group">
-              <button @click.prevent="formatDoc('insertUnorderedList')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="list-ul" />
-              </button>
-              <button @click.prevent="formatDoc('insertOrderedList')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="list-ol" />
-              </button>
-            </div>
-            
-            <!-- 링크 및 이미지 -->
-            <div class="btn-group me-3" role="group">
-              <button @click.prevent="formatDoc('createLink')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="link" />
-              </button>
-              <button @click.prevent="formatDoc('insertImage')" type="button" class="btn btn-sm btn-toolbar">
-                <font-awesome-icon icon="image" />
-              </button>
-            </div>
-            
-            <!-- 헤딩 -->
-            <div class="btn-group me-3" role="group">
-              <button @click.prevent="formatDoc('formatBlock', '<h2>')" type="button" class="btn btn-sm btn-toolbar fw-bold">가</button>
-              <button @click.prevent="formatDoc('formatBlock', '<h3>')" type="button" class="btn btn-sm btn-toolbar">가</button>
-              <button @click.prevent="formatDoc('formatBlock', '<h4>')" type="button" class="btn btn-sm btn-toolbar small">가</button>
-            </div>
-            
-            <!-- 기타 도구 -->
-            <div class="btn-group" role="group">
-              <button type="button" class="btn btn-sm btn-toolbar">기본모드</button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 에디터 콘텐츠 영역 -->
-        <div 
-          id="editor-content" 
-          class="editor-content"
-          contenteditable="true"
-          @input="handleEditorInput"
-          ref="editorContent"
-        ></div>
-        
-        <!-- 태그 및 발행 설정 영역 -->
-        <div class="post-options mt-4 pt-3 border-top">
-          <div class="row">
-            <div class="col-md-8">
-              <div class="tags-input">
-                <div class="d-flex align-items-center">
-                  <span class="tags-icon me-2">#</span>
-                  <input
-                    type="text"
-                    class="form-control form-control-sm border-0"
-                    v-model="tagInput"
-                    @keydown.enter.prevent="addTag"
-                    placeholder="태그를 입력하세요"
-                  />
+        <!-- 오른쪽 설정 영역 -->
+        <div class="col-md-4">
+          <!-- 글 설정 -->
+          <div class="card mb-4">
+            <div class="card-header">글 설정</div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label for="category" class="form-label">카테고리</label>
+                <select 
+                  class="form-select" 
+                  id="category" 
+                  v-model="postForm.category" 
+                  required
+                >
+                  <option value="" disabled selected>카테고리 선택</option>
+                  <option 
+                    v-for="category in categories" 
+                    :key="category.id" 
+                    :value="category.id"
+                  >
+                    {{ category.name }}
+                  </option>
+                </select>
+              </div>
+              
+              <div class="mb-3">
+                <label for="subtitle" class="form-label">부제목</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="subtitle" 
+                  v-model="postForm.subtitle" 
+                  placeholder="부제목을 입력하세요" 
+                >
+              </div>
+              
+              <div class="mb-3">
+                <label class="form-label d-block">발행 설정</label>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="publish-options" id="publish-public" 
+                    v-model="postForm.is_published" :value="true">
+                  <label class="form-check-label" for="publish-public">공개</label>
                 </div>
-                <div class="tags-list mt-2">
-                  <span v-for="(tag, index) in tags" :key="index" class="tag-item">
-                    {{ tag }}
-                    <button @click.prevent="removeTag(index)" class="tag-remove">×</button>
-                  </span>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="publish-options" id="publish-private" 
+                    v-model="postForm.is_published" :value="false">
+                  <label class="form-check-label" for="publish-private">비공개</label>
                 </div>
               </div>
             </div>
-            <div class="col-md-4 text-end">
-              <div class="form-check form-switch">
-                <input 
-                  type="checkbox" 
-                  class="form-check-input" 
-                  id="publish" 
-                  v-model="postForm.is_published"
-                >
-                <label class="form-check-label" for="publish">즉시 발행</label>
+          </div>
+          
+          <!-- 썸네일 설정 -->
+          <div class="card mb-4">
+            <div class="card-header">썸네일 이미지</div>
+            <div class="card-body">
+              <div class="thumbnail-container mb-2" @click="selectCoverImage">
+                <div v-if="selectedCoverImage" class="thumbnail-preview" 
+                  :style="{ backgroundImage: `url('${selectedCoverImage}')` }">
+                </div>
+                <div v-else class="thumbnail-empty d-flex align-items-center justify-content-center">
+                  <i class="fas fa-image text-muted"></i>
+                </div>
+                <button class="btn btn-sm btn-light thumbnail-btn">
+                  이미지 선택
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 태그 설정 -->
+          <div class="card mb-4">
+            <div class="card-header">태그</div>
+            <div class="card-body">
+              <div class="tags-input">
+                <input
+                  type="text"
+                  class="form-control mb-2"
+                  v-model="tagInput"
+                  @keydown.enter.prevent="addTag"
+                  placeholder="태그 입력 후 Enter"
+                />
+                <div class="tags-list">
+                  <span v-for="(tag, index) in tags" :key="index" class="tag-item">
+                    #{{ tag }}
+                    <button @click.prevent="removeTag(index)" class="tag-remove">×</button>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -194,6 +263,7 @@
 
 <script>
 import axios from 'axios';
+import { HOME_BG, POST_BG, ABOUT_BG, CONTACT_BG } from '../assets/img/placeholder.js';
 
 export default {
   name: 'PostWritePage',
@@ -205,15 +275,26 @@ export default {
         content: '',
         category: '',
         is_published: true,
-        tags: ''
+        tags: '',
+        cover_image: '',
+        slug: ''
       },
       categories: [],
       isSubmitting: false,
       errorMessage: '',
       successMessage: '',
       tagInput: '',
-      tags: []
+      tags: [],
+      backgroundImage: POST_BG,
+      availableCoverImages: [HOME_BG, POST_BG, ABOUT_BG, CONTACT_BG],
+      selectedCoverImage: null
     };
+  },
+  watch: {
+    'postForm.title': function(newTitle) {
+      // 제목이 변경될 때마다 slug 자동 생성
+      this.postForm.slug = this.slugify(newTitle);
+    }
   },
   created() {
     this.fetchCategories();
@@ -243,10 +324,76 @@ export default {
         this.errorMessage = '카테고리를 불러오는데 실패했습니다. 나중에 다시 시도해주세요.';
       }
     },
+    slugify(text) {
+      // 텍스트가 없으면 빈 문자열 반환
+      if (!text) return '';
+      
+      // 한글, 영문, 숫자를 URL 친화적인 형태로 변환
+      return text
+        .toString()
+        .toLowerCase()
+        .replace(/\s+/g, '-')     // 공백을 하이픈으로 변환
+        .replace(/[^\w-]+/g, '')  // 영문, 숫자, 하이픈이 아닌 문자 제거
+        .replace(/--+/g, '-')     // 여러 개의 하이픈을 하나로 변환
+        .replace(/^-+/, '')       // 시작 부분의 하이픈 제거
+        .replace(/-+$/, '');      // 끝 부분의 하이픈 제거
+    },
     formatDoc(command, value = null) {
       document.execCommand(command, false, value);
       this.$refs.editorContent.focus();
       this.handleEditorInput();
+    },
+    formatFont(fontName) {
+      if(fontName) {
+        this.formatDoc('fontName', fontName);
+      }
+    },
+    formatHeading(heading) {
+      if(heading) {
+        this.formatDoc('formatBlock', `<${heading}>`);
+      }
+    },
+    insertLink() {
+      const url = prompt('링크 URL을 입력하세요:', 'http://');
+      if (url) {
+        this.formatDoc('createLink', url);
+      }
+    },
+    insertImage() {
+      const url = prompt('이미지 URL을 입력하세요:', 'http://');
+      if (url) {
+        this.formatDoc('insertImage', url);
+      }
+    },
+    insertTable() {
+      const rows = prompt('행 수를 입력하세요:', '3');
+      const cols = prompt('열 수를 입력하세요:', '3');
+      
+      if (rows && cols) {
+        const table = document.createElement('table');
+        table.border = '1';
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        
+        for (let i = 0; i < rows; i++) {
+          const row = table.insertRow();
+          for (let j = 0; j < cols; j++) {
+            const cell = row.insertCell();
+            cell.innerHTML = '내용을 입력하세요';
+            cell.style.border = '1px solid #ccc';
+            cell.style.padding = '8px';
+          }
+        }
+        
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(table);
+        this.handleEditorInput();
+      }
+    },
+    insertHr() {
+      this.formatDoc('insertHorizontalRule');
     },
     handleEditorInput() {
       // 에디터 내용을 form data에 업데이트
@@ -266,6 +413,17 @@ export default {
     updateTagsInForm() {
       this.postForm.tags = this.tags.join(',');
     },
+    selectCoverImage() {
+      // 실제 구현에서는 여기서 이미지 선택 다이얼로그를 열어 이미지를 선택할 수 있게 합니다.
+      // 이 예제에서는 간단히 사용 가능한 이미지 중 하나를 선택합니다.
+      const randomIndex = Math.floor(Math.random() * this.availableCoverImages.length);
+      this.selectedCoverImage = this.availableCoverImages[randomIndex];
+      this.postForm.cover_image = this.selectedCoverImage;
+    },
+    saveAsDraft() {
+      this.postForm.is_published = false;
+      this.submitPost();
+    },
     async submitPost() {
       this.isSubmitting = true;
       this.errorMessage = '';
@@ -282,6 +440,16 @@ export default {
         // 최종 내용 업데이트
         this.postForm.content = this.$refs.editorContent.innerHTML;
         this.updateTagsInForm();
+        
+        // 슬러그가 없는 경우 제목에서 생성
+        if (!this.postForm.slug && this.postForm.title) {
+          this.postForm.slug = this.slugify(this.postForm.title);
+        }
+        
+        // 선택한 커버 이미지 설정
+        if (this.selectedCoverImage) {
+          this.postForm.cover_image = this.selectedCoverImage;
+        }
         
         const response = await axios.post(
           'http://localhost:8001/api/posts/', 
@@ -326,152 +494,106 @@ export default {
 </script>
 
 <style scoped>
-.logo {
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: #000;
-}
-
-.tistory-editor {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background-color: #fff;
-}
-
-.editor-header {
-  background-color: #fff;
-  border-bottom: 1px solid #e9ecef;
-  padding: 0.5rem 1rem;
-}
-
-.editor-content-wrapper {
-  flex: 1;
-  overflow-y: auto;
-  background-color: #fff;
-  max-width: 820px;
-  margin: 0 auto;
-  box-shadow: none;
-  padding-top: 1rem;
-}
-
-.title-input input {
-  font-size: 1.5rem;
-  font-weight: 500;
-  padding: 0.5rem 0;
-  background-color: transparent;
-  border-color: transparent;
-}
-
-.title-input input:focus {
-  box-shadow: none;
-  background-color: transparent;
-  border-color: transparent;
-}
-
-.editor-toolbar {
-  background-color: #fff;
-  border-color: #e9ecef !important;
-}
-
-.editor-toolbar .btn-toolbar {
-  color: #333;
-  font-size: 14px;
-  border: none;
-  background: transparent;
-  padding: 0.25rem 0.5rem;
-}
-
-.editor-toolbar .btn-toolbar:hover {
-  background-color: #f1f3f5;
-  border-radius: 2px;
-}
-
 .editor-content {
-  min-height: 500px;
-  padding: 1rem 0;
+  min-height: 400px;
+  padding: 1rem;
   overflow-y: auto;
+  margin-bottom: 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+}
+
+.editor-content:focus {
   outline: none;
-  line-height: 1.6;
-  color: #333;
+  border-color: var(--bs-primary);
 }
 
-.post-options {
-  color: #495057;
-}
-
-.tags-input {
-  background-color: #f8f9fa;
+.thumbnail-container {
+  position: relative;
+  border: 1px dashed #ccc;
   border-radius: 4px;
-  padding: 0.5rem;
+  overflow: hidden;
+  height: 150px;
+  cursor: pointer;
 }
 
-.tags-icon {
-  font-size: 1.2rem;
-  color: #868e96;
-  font-weight: bold;
+.thumbnail-preview {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+
+.thumbnail-empty {
+  width: 100%;
+  height: 100%;
+  font-size: 2rem;
+  color: #dee2e6;
+}
+
+.thumbnail-btn {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  border-radius: 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.thumbnail-container:hover .thumbnail-btn {
+  opacity: 1;
 }
 
 .tags-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .tag-item {
   display: inline-flex;
   align-items: center;
-  background-color: #e9ecef;
-  border-radius: 30px;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.875rem;
-  color: #495057;
+  background-color: rgba(0, 133, 161, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--bs-primary);
 }
 
 .tag-remove {
   background: none;
   border: none;
-  color: #adb5bd;
+  color: #6c757d;
   margin-left: 0.25rem;
-  padding: 0 0.25rem;
   cursor: pointer;
   font-size: 1rem;
+  padding: 0;
+  line-height: 0;
 }
 
 .tag-remove:hover {
-  color: #495057;
+  color: #dc3545;
 }
 
-.form-check-input:checked {
-  background-color: #000;
-  border-color: #000;
+/* 색상 선택기 */
+.color-picker {
+  min-width: 150px;
 }
 
-.btn-outline-secondary {
-  border-color: #ced4da;
-  color: #495057;
+.color-swatch {
+  width: 25px;
+  height: 25px;
+  margin: 2px;
+  border-radius: 2px;
+  cursor: pointer;
+  border: 1px solid #ccc;
 }
 
-.btn-outline-secondary:hover {
-  background-color: #f8f9fa;
-  color: #212529;
-  border-color: #ced4da;
-}
-
-.btn-dark {
-  background-color: #000;
-  border-color: #000;
-  padding: 0.25rem 0.75rem;
-}
-
-.btn-dark:hover, .btn-dark:focus {
-  background-color: #333;
-  border-color: #333;
-}
-
-.form-switch .form-check-input {
-  width: 2.5em;
-  height: 1.25em;
+.color-swatch:hover {
+  transform: scale(1.1);
 }
 </style> 

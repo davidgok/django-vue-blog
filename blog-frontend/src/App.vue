@@ -3,7 +3,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light" id="mainNav">
       <div class="container px-4 px-lg-5">
-        <router-link class="navbar-brand" to="/">블로그</router-link>
+        <router-link class="navbar-brand" to="/">null</router-link>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
           메뉴
           <i class="fas fa-bars"></i>
@@ -15,7 +15,7 @@
             
             <!-- 로그인한 사용자 메뉴 -->
             <template v-if="isLoggedIn">
-              <li class="nav-item"><router-link class="nav-link px-lg-3 py-3 py-lg-4" to="/write">글 작성</router-link></li>
+              <li class="nav-item"><router-link class="nav-link px-lg-3 py-3 py-lg-4" to="/write">글쓰기</router-link></li>
               <li class="nav-item"><router-link class="nav-link px-lg-3 py-3 py-lg-4" to="/manage">관리</router-link></li>
               <li class="nav-item"><a class="nav-link px-lg-3 py-3 py-lg-4" href="#" @click.prevent="logout">로그아웃</a></li>
             </template>

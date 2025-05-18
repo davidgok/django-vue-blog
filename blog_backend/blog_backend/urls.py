@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from blog.views import CategoryViewSet, PostViewSet, get_stats
+from blog.views import CategoryViewSet, PostViewSet, CommentViewSet, get_stats, get_settings, update_settings
 from rest_framework.authtoken.views import obtain_auth_token
 from django.contrib.auth import views as auth_views
 from rest_framework.authtoken.views import ObtainAuthToken
@@ -31,6 +31,7 @@ from rest_framework.permissions import AllowAny
 router = DefaultRouter()
 router.register(r'categories', CategoryViewSet)
 router.register(r'posts', PostViewSet)
+router.register(r'comments', CommentViewSet)
 
 # 커스텀 토큰 인증 뷰
 class CustomAuthToken(ObtainAuthToken):
@@ -93,6 +94,8 @@ urlpatterns = [
     path('api/auth/login/', CustomAuthToken.as_view(), name='api_token_auth'),
     path('api/auth/register/', register, name='register'),
     path('api/stats/', get_stats, name='blog_stats'),
+    path('api/settings/', get_settings, name='get_settings'),
+    path('api/settings/update/', update_settings, name='update_settings'),
     # 비밀번호 재설정 API는 더 복잡한 구현이 필요하므로 주석으로 처리
     # path('api/auth/password-reset/', password_reset, name='password_reset'),
     # path('api/auth/password-reset/confirm/', password_reset_confirm, name='password_reset_confirm'),

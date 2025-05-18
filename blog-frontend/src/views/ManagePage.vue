@@ -357,11 +357,13 @@
               <form @submit.prevent="saveSettings">
                 <div class="mb-3">
                   <label class="form-label">블로그 제목</label>
-                  <input type="text" class="form-control" v-model="settings.title" required>
+                  <input type="text" class="form-control" v-model="settings.title" placeholder="블로그 제목을 입력하세요 (선택사항)">
+                  <div class="form-text">비워두면 'null'로 표시됩니다.</div>
                 </div>
                 <div class="mb-3">
                   <label class="form-label">블로그 부제목</label>
-                  <input type="text" class="form-control" v-model="settings.subtitle">
+                  <input type="text" class="form-control" v-model="settings.subtitle" placeholder="블로그 부제목을 입력하세요 (선택사항)">
+                  <div class="form-text">블로그 메인 페이지에 표시될 부제목입니다. 입력하지 않으면 표시되지 않습니다.</div>
                 </div>
                 <div class="mb-3">
                   <label class="form-label">메인 페이지 표시 글 수</label>

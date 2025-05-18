@@ -6,8 +6,8 @@
         <div class="row gx-4 gx-lg-5 justify-content-center">
           <div class="col-md-10 col-lg-8 col-xl-7">
             <div class="site-heading">
-              <h1>Clean Blog</h1>
-              <span class="subheading">A Blog Theme by Start Bootstrap</span>
+              <h1>{{ blogSettings.title }}</h1>
+              <span class="subheading">{{ blogSettings.subtitle }}</span>
             </div>
           </div>
         </div>
@@ -63,11 +63,16 @@ export default {
       posts: [],
       loading: true,
       error: null,
-      backgroundImage: HOME_BG
+      backgroundImage: HOME_BG,
+      blogSettings: {
+        title: '블로그',
+        subtitle: ''
+      }
     }
   },
   created() {
     this.fetchPosts();
+    this.fetchBlogSettings();
   },
   methods: {
     async fetchPosts() {
@@ -80,6 +85,15 @@ export default {
         console.error('글 목록을 불러오는데 실패했습니다:', error);
         this.error = '게시글 목록을 불러오는데 실패했습니다.';
         this.loading = false;
+      }
+    },
+    async fetchBlogSettings() {
+      try {
+        const response = await axios.get('http://localhost:8001/api/settings/');
+        // API에서 반환한 설정값으로 업데이트
+        this.blogSettings = response.data;
+      } catch (error) {
+        console.error('블로그 설정을 불러오는데 실패했습니다:', error);
       }
     },
     formatDate(dateString) {
