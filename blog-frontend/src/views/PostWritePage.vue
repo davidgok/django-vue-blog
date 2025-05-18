@@ -1,258 +1,232 @@
 <template>
   <div>
-    <!-- Page Header-->
-    <header class="masthead" :style="{ backgroundImage: `url('${backgroundImage}')` }">
-      <div class="container position-relative px-4 px-lg-5">
-        <div class="row gx-4 gx-lg-5 justify-content-center">
-          <div class="col-md-10 col-lg-8 col-xl-7">
-            <div class="site-heading">
-              <h1>글쓰기</h1>
-              <span class="subheading">블로그에 새 글을 작성합니다</span>
-            </div>
-          </div>
+    <!-- 여기서는 App.vue의 네비게이션 바가 이미 렌더링되어 있습니다 -->
+    
+    <!-- 알림 메시지 (간결한 디자인) -->
+    <div v-if="errorMessage" class="alert alert-danger rounded-0 mb-0 text-center py-2" style="z-index: 2000; position: relative;">
+      {{ errorMessage }}
+    </div>
+    <div v-if="successMessage" class="alert alert-success rounded-0 mb-0 text-center py-2" style="z-index: 2000; position: relative;">
+      {{ successMessage }}
+    </div>
+    
+    <!-- 네비게이션 바와의 간격 조정 -->
+    <div style="height: 56px;"></div>
+    
+    <!-- 티스토리 스타일 편집기 영역 -->
+    <div class="container py-4">
+      <!-- 카테고리 선택과 버튼 영역 - 고정 위치로 설정하고 z-index를 높임 -->
+      <div class="d-flex align-items-center pb-3 mb-4 border-bottom" 
+          style="z-index: 2000; background-color: #fff; position: sticky; top: 56px; padding-top: 15px; width: 100%;">
+        <select 
+          class="form-select form-select-sm border-0 text-muted bg-light rounded-pill"
+          style="width: 150px;" 
+          v-model="postForm.category"
+        >
+          <option value="" disabled selected>카테고리</option>
+          <option 
+            v-for="category in categories" 
+            :key="category.id" 
+            :value="category.id"
+          >
+            {{ category.name }}
+          </option>
+        </select>
+        
+        <!-- 오른쪽에 버튼들 -->
+        <div class="ms-auto">
+          <button
+            type="button" 
+            class="btn btn-sm btn-light rounded-pill px-3 border me-1"
+            style="font-size: 0.85rem; background-color: #fff !important;"
+            @click="saveAsDraft"
+            :disabled="isSubmitting"
+          >
+            임시저장
+          </button>
+          <button
+            type="button" 
+            class="btn btn-sm btn-outline-danger rounded-pill px-3 border me-1"
+            style="font-size: 0.85rem; background-color: #fff !important;"
+            @click="confirmDelete"
+            :disabled="isSubmitting"
+          >
+            삭제
+          </button>
+          <button
+            type="button" 
+            class="btn btn-sm btn-primary rounded-pill px-3"
+            style="font-size: 0.85rem; background-color: #1eb4eb !important; border-color: #1eb4eb !important;"
+            @click="submitPost"
+            :disabled="isSubmitting"
+          >
+            <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            완료
+          </button>
         </div>
       </div>
-    </header>
-
-    <!-- 메인 에디터 영역 -->
-    <div class="container px-4 px-lg-5">
-      <!-- Alert Messages -->
-      <div v-if="errorMessage" class="alert alert-danger">
-        {{ errorMessage }}
+      
+      <!-- 제목 입력 (티스토리 스타일) -->
+      <div class="pb-3 mb-4 position-relative" style="z-index: 900;">
+        <input 
+          type="text" 
+          class="form-control border-0 fs-4 fw-medium p-0" 
+          id="title" 
+          v-model="postForm.title" 
+          placeholder="제목을 입력하세요" 
+          required
+          style="outline: none; box-shadow: none; border-radius: 0;"
+        >
       </div>
-      <div v-if="successMessage" class="alert alert-success">
-        {{ successMessage }}
-      </div>
-
-      <div class="row gx-4 gx-lg-5">
-        <!-- 왼쪽 에디터 영역 -->
-        <div class="col-md-8">
-          <div class="card mb-4">
-            <div class="card-body">
-              <!-- 제목 입력 -->
-              <div class="mb-3">
-                <input 
-                  type="text" 
-                  class="form-control form-control-lg border-0" 
-                  id="title" 
-                  v-model="postForm.title" 
-                  placeholder="제목을 입력하세요" 
-                  required
-                >
-              </div>
-              
-              <!-- 에디터 툴바 -->
-              <div class="editor-toolbar d-flex border-top border-bottom py-1 mb-3">
-                <div class="btn-toolbar flex-wrap" role="toolbar">
-                  <!-- 글꼴 설정 -->
-                  <div class="btn-group me-2" role="group">
-                    <select class="form-select form-select-sm" @change="formatFont($event.target.value)">
-                      <option value="">글꼴</option>
-                      <option value="Arial">Arial</option>
-                      <option value="Verdana">Verdana</option>
-                      <option value="Helvetica">Helvetica</option>
-                      <option value="Times New Roman">Times New Roman</option>
-                      <option value="Courier New">Courier New</option>
-                      <option value="맑은 고딕">맑은 고딕</option>
-                      <option value="나눔고딕">나눔고딕</option>
-                    </select>
-                  </div>
-                  
-                  <div class="btn-group me-2" role="group">
-                    <select class="form-select form-select-sm" @change="formatHeading($event.target.value)">
-                      <option value="">본문</option>
-                      <option value="h2">제목 1</option>
-                      <option value="h3">제목 2</option>
-                      <option value="h4">제목 3</option>
-                    </select>
-                  </div>
-                  
-                  <!-- 텍스트 서식 -->
-                  <div class="btn-group me-2" role="group">
-                    <button @click.prevent="formatDoc('bold')" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-bold"></i>
-                    </button>
-                    <button @click.prevent="formatDoc('italic')" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-italic"></i>
-                    </button>
-                    <button @click.prevent="formatDoc('underline')" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-underline"></i>
-                    </button>
-                    <button @click.prevent="formatDoc('strikeThrough')" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-strikethrough"></i>
-                    </button>
-                  </div>
-                  
-                  <!-- 텍스트 정렬 -->
-                  <div class="btn-group me-2" role="group">
-                    <button @click.prevent="formatDoc('justifyLeft')" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-align-left"></i>
-                    </button>
-                    <button @click.prevent="formatDoc('justifyCenter')" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-align-center"></i>
-                    </button>
-                    <button @click.prevent="formatDoc('justifyRight')" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-align-right"></i>
-                    </button>
-                  </div>
-                  
-                  <!-- 목록 -->
-                  <div class="btn-group me-2" role="group">
-                    <button @click.prevent="formatDoc('insertUnorderedList')" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-list-ul"></i>
-                    </button>
-                    <button @click.prevent="formatDoc('insertOrderedList')" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-list-ol"></i>
-                    </button>
-                  </div>
-                  
-                  <!-- 링크 및 이미지 -->
-                  <div class="btn-group me-2" role="group">
-                    <button @click.prevent="insertLink()" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-link"></i>
-                    </button>
-                    <button @click.prevent="insertImage()" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-image"></i>
-                    </button>
-                    <button @click.prevent="insertTable()" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-table"></i>
-                    </button>
-                    <button @click.prevent="insertHr()" type="button" class="btn btn-sm btn-outline-secondary">
-                      <i class="fas fa-minus"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- 에디터 콘텐츠 영역 -->
-              <div 
-                id="editor-content" 
-                class="editor-content"
-                contenteditable="true"
-                @input="handleEditorInput"
-                ref="editorContent"
-              ></div>
-            </div>
-          </div>
-          
-          <!-- 버튼 영역 -->
-          <div class="d-flex justify-content-end mb-4">
-            <button 
-              type="button" 
-              class="btn btn-outline-secondary me-2" 
-              @click="$router.push('/')"
-            >
-              취소
-            </button>
-            <button 
-              type="button" 
-              class="btn btn-outline-primary me-2" 
-              @click="saveAsDraft"
-              :disabled="isSubmitting"
-            >
-              임시저장
-            </button>
-            <button 
-              type="button" 
-              class="btn btn-primary" 
-              @click="submitPost"
-              :disabled="isSubmitting"
-            >
-              <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-              발행
-            </button>
-          </div>
+      
+      <!-- 에디터 툴바 (티스토리 스타일) -->
+      <div class="editor-toolbar d-flex py-2 px-3 bg-light rounded mb-4 align-items-center position-relative" style="z-index: 800;">
+        <!-- 기본 서식 도구 -->
+        <div class="btn-group me-2">
+          <button @click.prevent="formatDoc('bold')" type="button" class="btn btn-sm btn-light">
+            <strong>B</strong>
+          </button>
+          <button @click.prevent="formatDoc('italic')" type="button" class="btn btn-sm btn-light">
+            <i>I</i>
+          </button>
+          <button @click.prevent="formatDoc('underline')" type="button" class="btn btn-sm btn-light">
+            <u>U</u>
+          </button>
+          <button @click.prevent="formatDoc('strikeThrough')" type="button" class="btn btn-sm btn-light">
+            S
+          </button>
         </div>
         
-        <!-- 오른쪽 설정 영역 -->
-        <div class="col-md-4">
-          <!-- 글 설정 -->
-          <div class="card mb-4">
-            <div class="card-header">글 설정</div>
-            <div class="card-body">
-              <div class="mb-3">
-                <label for="category" class="form-label">카테고리</label>
-                <select 
-                  class="form-select" 
-                  id="category" 
-                  v-model="postForm.category" 
-                  required
-                >
-                  <option value="" disabled selected>카테고리 선택</option>
-                  <option 
-                    v-for="category in categories" 
-                    :key="category.id" 
-                    :value="category.id"
-                  >
-                    {{ category.name }}
-                  </option>
-                </select>
-              </div>
-              
-              <div class="mb-3">
-                <label for="subtitle" class="form-label">부제목</label>
-                <input 
-                  type="text" 
-                  class="form-control" 
-                  id="subtitle" 
-                  v-model="postForm.subtitle" 
-                  placeholder="부제목을 입력하세요" 
-                >
-              </div>
-              
-              <div class="mb-3">
-                <label class="form-label d-block">발행 설정</label>
-                <div class="form-check form-check-inline">
-                  <input class="form-check-input" type="radio" name="publish-options" id="publish-public" 
-                    v-model="postForm.is_published" :value="true">
-                  <label class="form-check-label" for="publish-public">공개</label>
-                </div>
-                <div class="form-check form-check-inline">
-                  <input class="form-check-input" type="radio" name="publish-options" id="publish-private" 
-                    v-model="postForm.is_published" :value="false">
-                  <label class="form-check-label" for="publish-private">비공개</label>
-                </div>
-              </div>
+        <!-- 정렬 도구 -->
+        <div class="btn-group me-2">
+          <button @click.prevent="formatDoc('justifyLeft')" type="button" class="btn btn-sm btn-light">
+            <i class="fas fa-align-left"></i>
+          </button>
+          <button @click.prevent="formatDoc('justifyCenter')" type="button" class="btn btn-sm btn-light">
+            <i class="fas fa-align-center"></i>
+          </button>
+          <button @click.prevent="formatDoc('justifyRight')" type="button" class="btn btn-sm btn-light">
+            <i class="fas fa-align-right"></i>
+          </button>
+        </div>
+        
+        <!-- 목록 도구 -->
+        <div class="btn-group me-2">
+          <button @click.prevent="formatDoc('insertUnorderedList')" type="button" class="btn btn-sm btn-light">
+            <i class="fas fa-list-ul"></i>
+          </button>
+          <button @click.prevent="formatDoc('insertOrderedList')" type="button" class="btn btn-sm btn-light">
+            <i class="fas fa-list-ol"></i>
+          </button>
+        </div>
+        
+        <!-- 미디어 및 특수 도구 -->
+        <div class="btn-group me-2">
+          <button @click.prevent="insertLink()" type="button" class="btn btn-sm btn-light">
+            <i class="fas fa-link"></i>
+          </button>
+          <button @click.prevent="insertImage()" type="button" class="btn btn-sm btn-light">
+            <i class="fas fa-image"></i>
+          </button>
+          <button @click.prevent="insertTable()" type="button" class="btn btn-sm btn-light">
+            <i class="fas fa-table"></i>
+          </button>
+          <button @click.prevent="insertHr()" type="button" class="btn btn-sm btn-light">
+            <i class="fas fa-minus"></i>
+          </button>
+        </div>
+        
+        <!-- 글꼴 및 본문 스타일 (드롭다운) -->
+        <div class="dropdown">
+          <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="fas fa-ellipsis-h"></i>
+          </button>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" @click.prevent="formatFont('Arial')">Arial</a></li>
+            <li><a class="dropdown-item" href="#" @click.prevent="formatFont('맑은 고딕')">맑은 고딕</a></li>
+            <li><a class="dropdown-item" href="#" @click.prevent="formatFont('나눔고딕')">나눔고딕</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#" @click.prevent="formatHeading('h2')">제목 1</a></li>
+            <li><a class="dropdown-item" href="#" @click.prevent="formatHeading('h3')">제목 2</a></li>
+            <li><a class="dropdown-item" href="#" @click.prevent="formatHeading('h4')">제목 3</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- 에디터 콘텐츠 영역 (티스토리 스타일) -->
+      <div 
+        id="editor-content" 
+        class="editor-content position-relative"
+        contenteditable="true"
+        @input="handleEditorInput"
+        ref="editorContent"
+        style="z-index: 500; margin-top: 15px;"
+      ></div>
+      
+      <!-- 태그 입력 영역 (티스토리 스타일) -->
+      <div class="py-3 border-top mt-5 mb-3 position-relative" style="z-index: 700;">
+        <div class="d-flex align-items-center">
+          <span class="text-muted me-2">#</span>
+          <input
+            type="text"
+            class="form-control form-control-sm border-0"
+            v-model="tagInput"
+            @keydown.enter.prevent="addTag"
+            placeholder="태그 입력 후 Enter"
+            style="outline: none; box-shadow: none;"
+          />
+        </div>
+        <div class="tags-list mt-3">
+          <span v-for="(tag, index) in tags" :key="index" class="tag-item">
+            #{{ tag }}
+            <button @click.prevent="removeTag(index)" class="tag-remove">×</button>
+          </span>
+        </div>
+      </div>
+      
+      <!-- 부가 설정 패널 (오프캔버스) -->
+      <div class="offcanvas offcanvas-end" tabindex="-1" id="settingsOffcanvas">
+        <div class="offcanvas-header">
+          <h5 class="offcanvas-title">글 설정</h5>
+          <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+          <!-- 부제목 설정 -->
+          <div class="mb-3">
+            <label for="subtitle" class="form-label">부제목</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="subtitle" 
+              v-model="postForm.subtitle" 
+              placeholder="부제목을 입력하세요" 
+            >
+          </div>
+          
+          <!-- 공개 설정 -->
+          <div class="mb-3">
+            <label class="form-label d-block">발행 설정</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="publish-switch" v-model="postForm.is_published">
+              <label class="form-check-label" for="publish-switch">
+                {{ postForm.is_published ? '공개' : '비공개' }}
+              </label>
             </div>
           </div>
           
           <!-- 썸네일 설정 -->
-          <div class="card mb-4">
-            <div class="card-header">썸네일 이미지</div>
-            <div class="card-body">
-              <div class="thumbnail-container mb-2" @click="selectCoverImage">
-                <div v-if="selectedCoverImage" class="thumbnail-preview" 
-                  :style="{ backgroundImage: `url('${selectedCoverImage}')` }">
-                </div>
-                <div v-else class="thumbnail-empty d-flex align-items-center justify-content-center">
-                  <i class="fas fa-image text-muted"></i>
-                </div>
-                <button class="btn btn-sm btn-light thumbnail-btn">
-                  이미지 선택
-                </button>
+          <div class="mb-4">
+            <label class="form-label">썸네일 이미지</label>
+            <div class="thumbnail-container" @click="selectCoverImage">
+              <div v-if="selectedCoverImage" class="thumbnail-preview" 
+                :style="{ backgroundImage: `url('${selectedCoverImage}')` }">
               </div>
-            </div>
-          </div>
-          
-          <!-- 태그 설정 -->
-          <div class="card mb-4">
-            <div class="card-header">태그</div>
-            <div class="card-body">
-              <div class="tags-input">
-                <input
-                  type="text"
-                  class="form-control mb-2"
-                  v-model="tagInput"
-                  @keydown.enter.prevent="addTag"
-                  placeholder="태그 입력 후 Enter"
-                />
-                <div class="tags-list">
-                  <span v-for="(tag, index) in tags" :key="index" class="tag-item">
-                    #{{ tag }}
-                    <button @click.prevent="removeTag(index)" class="tag-remove">×</button>
-                  </span>
-                </div>
+              <div v-else class="thumbnail-empty d-flex align-items-center justify-content-center">
+                <i class="fas fa-image text-muted"></i>
               </div>
+              <button class="btn btn-sm btn-light thumbnail-btn">
+                이미지 선택
+              </button>
             </div>
           </div>
         </div>
@@ -488,33 +462,152 @@ export default {
       } finally {
         this.isSubmitting = false;
       }
+    },
+    confirmDelete() {
+      if (confirm('글을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+        this.deletePost();
+      }
+    },
+    async deletePost() {
+      this.isSubmitting = true;
+      this.errorMessage = '';
+      
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          this.errorMessage = '로그인이 필요합니다.';
+          this.$router.push('/login');
+          return;
+        }
+        
+        // 새 글인 경우는 그냥 홈으로 이동
+        if (!this.postForm.id) {
+          this.$router.push('/');
+          return;
+        }
+        
+        // 기존 글 삭제 API 호출
+        await axios.delete(
+          `http://localhost:8001/api/posts/${this.postForm.id}/`, 
+          {
+            headers: {
+              Authorization: `Token ${token}`
+            }
+          }
+        );
+        
+        // 삭제 성공 후 홈페이지로 이동
+        this.$router.push('/');
+      } catch (error) {
+        console.error('글 삭제 실패:', error);
+        this.errorMessage = '글 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      } finally {
+        this.isSubmitting = false;
+      }
     }
   }
 }
 </script>
 
 <style scoped>
+/* 티스토리 스타일 에디터 */
 .editor-content {
   min-height: 400px;
-  padding: 1rem;
-  overflow-y: auto;
+  padding: 0;
   margin-bottom: 1rem;
-  border: 1px solid #dee2e6;
-  border-radius: 0.25rem;
+  border: none;
+  font-size: 16px;
+  line-height: 1.8;
+  outline: none;
+  background-color: #fff;
 }
 
 .editor-content:focus {
-  outline: none;
-  border-color: var(--bs-primary);
+  border-color: #ddd;
 }
 
+/* 툴바 상단 고정 및 스타일 개선 */
+.editor-toolbar {
+  background-color: #f8f9fa !important;
+  border-color: #eee !important;
+}
+
+.editor-toolbar .btn-light {
+  background-color: transparent;
+  border-color: transparent;
+}
+
+.editor-toolbar .btn-light:hover {
+  background-color: rgba(0,0,0,0.05);
+}
+
+/* 버튼 스타일 개선 */
+.btn-primary {
+  background-color: #1eb4eb !important;
+  border-color: #1eb4eb !important;
+  color: #fff !important;
+}
+
+.btn-primary:hover {
+  background-color: #1a9ed0 !important;
+  border-color: #1a9ed0 !important;
+}
+
+.btn-light {
+  background-color: #fff !important;
+}
+
+.btn-outline-danger {
+  color: #dc3545 !important;
+  background-color: #fff !important;
+}
+
+/* 티스토리 스타일 태그 */
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  background-color: #f8f9fa;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.85rem;
+  color: #495057;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  color: #6c757d;
+  margin-left: 0.25rem;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  line-height: 0;
+}
+
+.tag-remove:hover {
+  color: #dc3545;
+}
+
+/* 썸네일 스타일 유지 */
 .thumbnail-container {
   position: relative;
-  border: 1px dashed #ccc;
+  border: 1px solid #eee;
   border-radius: 4px;
   overflow: hidden;
-  height: 150px;
+  aspect-ratio: 16/9;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.thumbnail-container:hover {
+  border-color: #ccc;
 }
 
 .thumbnail-preview {
@@ -546,54 +639,5 @@ export default {
 
 .thumbnail-container:hover .thumbnail-btn {
   opacity: 1;
-}
-
-.tags-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
-.tag-item {
-  display: inline-flex;
-  align-items: center;
-  background-color: rgba(0, 133, 161, 0.1);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: var(--bs-primary);
-}
-
-.tag-remove {
-  background: none;
-  border: none;
-  color: #6c757d;
-  margin-left: 0.25rem;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0;
-  line-height: 0;
-}
-
-.tag-remove:hover {
-  color: #dc3545;
-}
-
-/* 색상 선택기 */
-.color-picker {
-  min-width: 150px;
-}
-
-.color-swatch {
-  width: 25px;
-  height: 25px;
-  margin: 2px;
-  border-radius: 2px;
-  cursor: pointer;
-  border: 1px solid #ccc;
-}
-
-.color-swatch:hover {
-  transform: scale(1.1);
 }
 </style> 
