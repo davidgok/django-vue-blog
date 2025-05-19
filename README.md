@@ -3,6 +3,11 @@
 ## 프로젝트 소개
 블로그 플랫폼을 위한 Django 백엔드와 Vue.js 프론트엔드 기반의 풀스택 웹 애플리케이션입니다. 사용자는 개인 블로그를 생성하고 관리할 수 있으며, 글 작성 및 카테고리 관리 등의 기능을 제공합니다.
 
+## 데모 영상
+프로젝트의 주요 기능을 시연한 영상입니다:
+- [데모 영상 1 보기](https://github.com/davidgok/django-vue-blog/issues/1)
+- [데모 영상 2 보기](https://github.com/davidgok/django-vue-blog/issues/1)
+- 
 ## 기술 스택
 
 ### 백엔드
