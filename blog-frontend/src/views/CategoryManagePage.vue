@@ -1,24 +1,5 @@
 <template>
-  <div>
-    <!-- 페이지 헤더 -->
-    <header class="masthead" :style="{ backgroundImage: `url('${backgroundImage}')` }">
-      <div class="container position-relative px-4 px-lg-5">
-        <div class="row gx-4 gx-lg-5 justify-content-center">
-          <div class="col-md-10 col-lg-8 col-xl-7">
-            <div class="page-heading">
-              <h1>카테고리 관리</h1>
-              <span class="subheading">블로그 카테고리를 관리하세요</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- 메인 컨텐츠 -->
-    <div class="container px-4 px-lg-5">
-      <div class="row gx-4 gx-lg-5 justify-content-center">
-        <div class="col-md-10 col-lg-8 col-xl-7">
-          <!-- 알림 메시지 -->
+    <div>    <header class="masthead" :style="{ backgroundImage: `url('${backgroundImage}')` }">      <div class="container position-relative px-4 px-lg-5">        <div class="row gx-4 gx-lg-5 justify-content-center">          <div class="col-md-10 col-lg-8 col-xl-7">            <div class="page-heading">              <h1>카테고리 관리</h1>              <span class="subheading">블로그 카테고리를 관리하세요</span>            </div>          </div>        </div>      </div>    </header>    <div class="container px-4 px-lg-5">      <div class="row gx-4 gx-lg-5 justify-content-center">        <div class="col-md-10 col-lg-8 col-xl-7">
           <div v-if="errorMessage" class="alert alert-danger mb-4">
             {{ errorMessage }}
           </div>
@@ -42,14 +23,14 @@
                   </div>
                 </div>
                 <div class="card-body">
-                  <form @submit.prevent="addCategory">
+                  <form @submit.prevent="validateAndAddCategory">
                     <div class="mb-3">
                       <label for="categoryName" class="form-label">카테고리 이름</label>
                       <input 
                         type="text" 
                         class="form-control" 
                         id="categoryName" 
-                        v-model="newCategory.name" 
+                        v-model.trim="newCategory.name" 
                         placeholder="새 카테고리 이름을 입력하세요"
                         required
                       >
@@ -61,12 +42,13 @@
                           type="text" 
                           class="form-control" 
                           id="categorySlug" 
-                          v-model="newCategory.slug" 
+                          v-model.trim="newCategory.slug" 
                           placeholder="category-slug"
                           aria-describedby="slugHelp"
+                          required
                         >
                         <button 
-                          @click="generateSlug" 
+                          @click.prevent="generateSlug" 
                           type="button" 
                           class="btn btn-outline-secondary"
                         >
@@ -177,8 +159,9 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '../services/api';
 import { POST_BG } from '../assets/img/placeholder.js';
+import slugify from '../utils/slugify';
 
 export default {
   name: 'CategoryManagePage',
@@ -201,93 +184,35 @@ export default {
   },
   methods: {
     checkAuthentication() {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) {
-        // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
         this.$router.push('/login');
-        return;
+        return false;
       }
+      return true;
     },
     async fetchCategories() {
       try {
         this.isLoading = true;
-        const response = await axios.get('http://localhost:8001/api/categories/');
+        const response = await api.categories.getAll();
         this.categories = response.data.map(category => ({
           ...category,
           isEditing: false,
           editName: category.name,
           editSlug: category.slug
         }));
-        this.isLoading = false;
       } catch (error) {
         console.error('카테고리를 불러오는데 실패했습니다:', error);
         this.errorMessage = '카테고리를 불러오는데 실패했습니다. 나중에 다시 시도해주세요.';
-        this.isLoading = false;
-      }
-    },
-    async addCategory() {
-      if (!this.newCategory.name.trim()) return;
-      
-      try {
-        this.isLoading = true;
-        this.errorMessage = '';
-        this.successMessage = '';
-        
-        // slug가 비어있으면 자동 생성
-        if (!this.newCategory.slug.trim()) {
-          this.newCategory.slug = this.slugify(this.newCategory.name);
-        }
-        
-        const token = localStorage.getItem('token');
-        const response = await axios.post(
-          'http://localhost:8001/api/categories/',
-          this.newCategory,
-          {
-            headers: {
-              Authorization: `Token ${token}`
-            }
-          }
-        );
-        
-        // 새 카테고리를 목록에 추가
-        this.categories.push({
-          ...response.data,
-          isEditing: false,
-          editName: response.data.name,
-          editSlug: response.data.slug
-        });
-        
-        // 입력 폼 초기화
-        this.newCategory = {
-          name: '',
-          slug: ''
-        };
-        
-        this.successMessage = '카테고리가 성공적으로 추가되었습니다.';
-        this.isLoading = false;
-      } catch (error) {
-        console.error('카테고리 추가 실패:', error);
-        
-        if (error.response && error.response.data) {
-          if (typeof error.response.data === 'object') {
-            const messages = [];
-            for (const field in error.response.data) {
-              messages.push(`${field}: ${error.response.data[field]}`);
-            }
-            this.errorMessage = messages.join('\n');
-          } else {
-            this.errorMessage = error.response.data;
-          }
-        } else {
-          this.errorMessage = '카테고리 추가 중 오류가 발생했습니다.';
-        }
-        
+      } finally {
         this.isLoading = false;
       }
     },
     generateSlug() {
       if (this.newCategory.name.trim()) {
-        this.newCategory.slug = this.slugify(this.newCategory.name);
+        this.newCategory.slug = slugify(this.newCategory.name, 'category');
+      } else {
+        this.errorMessage = '카테고리 이름을 먼저 입력해주세요.';
       }
     },
     startEdit(category) {
@@ -302,48 +227,21 @@ export default {
       if (!category.editName.trim()) return;
       
       try {
-        this.isLoading = true;
-        this.errorMessage = '';
-        this.successMessage = '';
+        this.startLoading();
         
-        const token = localStorage.getItem('token');
-        const response = await axios.put(
-          `http://localhost:8001/api/categories/${category.slug}/`,
-          {
-            name: category.editName,
-            slug: category.slug // 슬러그는 변경하지 않음
-          },
-          {
-            headers: {
-              Authorization: `Token ${token}`
-            }
-          }
-        );
+        const response = await api.categories.update(category.slug, {
+          name: category.editName,
+          slug: category.slug
+        });
         
-        // 카테고리 정보 업데이트
         category.name = response.data.name;
         category.isEditing = false;
         
         this.successMessage = '카테고리가 성공적으로 수정되었습니다.';
-        this.isLoading = false;
       } catch (error) {
-        console.error('카테고리 수정 실패:', error);
-        
-        if (error.response && error.response.data) {
-          if (typeof error.response.data === 'object') {
-            const messages = [];
-            for (const field in error.response.data) {
-              messages.push(`${field}: ${error.response.data[field]}`);
-            }
-            this.errorMessage = messages.join('\n');
-          } else {
-            this.errorMessage = error.response.data;
-          }
-        } else {
-          this.errorMessage = '카테고리 수정 중 오류가 발생했습니다.';
-        }
-        
-        this.isLoading = false;
+        this.handleError(error, '카테고리 수정 실패');
+      } finally {
+        this.finishLoading();
       }
     },
     async deleteCategory(categoryId) {
@@ -352,51 +250,102 @@ export default {
       }
       
       try {
-        this.isLoading = true;
-        this.errorMessage = '';
-        this.successMessage = '';
+        this.startLoading();
         
-        const token = localStorage.getItem('token');
         const category = this.categories.find(c => c.id === categoryId);
-        
         if (!category) return;
         
-        await axios.delete(
-          `http://localhost:8001/api/categories/${category.slug}/`,
-          {
-            headers: {
-              Authorization: `Token ${token}`
-            }
-          }
-        );
+        await api.categories.delete(category.slug);
         
-        // 삭제된 카테고리를 목록에서 제거
         this.categories = this.categories.filter(c => c.id !== categoryId);
-        
         this.successMessage = '카테고리가 성공적으로 삭제되었습니다.';
-        this.isLoading = false;
       } catch (error) {
-        console.error('카테고리 삭제 실패:', error);
-        
         if (error.response && error.response.status === 400) {
           this.errorMessage = '이 카테고리에 연결된 글이 있어 삭제할 수 없습니다.';
         } else {
           this.errorMessage = '카테고리 삭제 중 오류가 발생했습니다.';
         }
-        
-        this.isLoading = false;
+      } finally {
+        this.finishLoading();
       }
     },
-    slugify(text) {
-      // 한글, 영문, 숫자를 URL 친화적인 형태로 변환
-      return text
-        .toString()
-        .toLowerCase()
-        .replace(/\s+/g, '-')     // 공백을 하이픈으로 변환
-        .replace(/[^\w-]+/g, '')  // 영문, 숫자, 하이픈이 아닌 문자 제거
-        .replace(/--+/g, '-')     // 여러 개의 하이픈을 하나로 변환
-        .replace(/^-+/, '')       // 시작 부분의 하이픈 제거
-        .replace(/-+$/, '');      // 끝 부분의 하이픈 제거
+    async validateAndAddCategory() {
+      if (!this.newCategory.name.trim()) {
+        this.errorMessage = '카테고리 이름을 입력해주세요.';
+        return;
+      }
+      
+      try {
+        this.startLoading();
+        
+        if (!this.checkAuthentication()) return;
+        
+        // 카테고리 생성 데이터
+        const categoryData = {
+          name: this.newCategory.name.trim(),
+          slug: this.newCategory.slug || '' // 자동 생성될 수 있음
+        };
+        
+        // API 서비스의 categories.create 함수 사용
+        const response = await api.categories.create(categoryData);
+        
+        // 새 카테고리를 목록에 추가
+        this.categories.push({
+          ...response.data,
+          isEditing: false,
+          editName: response.data.name,
+          editSlug: response.data.slug
+        });
+        
+        // 폼 초기화
+        this.newCategory = {
+          name: '',
+          slug: ''
+        };
+        
+        this.successMessage = '카테고리가 성공적으로 추가되었습니다.';
+      } catch (error) {
+        console.error('카테고리 추가 실패:', error);
+        this.handleError(error, '카테고리 추가 실패');
+      } finally {
+        this.finishLoading();
+      }
+    },
+    // 공통으로 사용되는 유틸리티 메서드들
+    startLoading() {
+      this.isLoading = true;
+      this.errorMessage = '';
+      this.successMessage = '';
+    },
+    finishLoading() {
+      this.isLoading = false;
+    },
+    handleError(error, prefix = '오류') {
+      console.error(`${prefix}:`, error);
+      
+      if (error.response && error.response.data) {
+        console.error('서버 응답 데이터:', error.response.data);
+        
+        if (typeof error.response.data === 'object') {
+          const messages = [];
+          for (const field in error.response.data) {
+            if (field === 'slug') {
+              messages.push(`슬러그(URL): ${error.response.data[field]}`);
+            } else if (field === 'name') {
+              messages.push(`카테고리 이름: ${error.response.data[field]}`);
+            } else {
+              messages.push(`${field}: ${error.response.data[field]}`);
+            }
+          }
+          this.errorMessage = messages.join(' / ');
+        } else {
+          this.errorMessage = '서버 오류: ' + error.response.data;
+        }
+      } else if (error.message) {
+        this.errorMessage = error.message;
+      } else {
+        this.errorMessage = '알 수 없는 오류가 발생했습니다. 다시 시도해주세요.';
+      }
     }
   }
 }

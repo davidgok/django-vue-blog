@@ -84,7 +84,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '../services/api';
 import { HOME_BG } from '../assets/img/placeholder.js';
 
 export default {
@@ -106,21 +106,54 @@ export default {
       this.isLoading = true;
       this.errorMessage = '';
       
+      console.log('로그인 시도:', this.loginForm.username);
+      
       try {
-        // Django REST 인증 API를 호출
-        const response = await axios.post('http://localhost:8001/api/auth/login/', {
+        const response = await api.auth.login({
           username: this.loginForm.username,
           password: this.loginForm.password
         });
         
-        // 토큰을 로컬 스토리지에 저장
-        localStorage.setItem('token', response.data.token);
+        console.log('로그인 응답:', response.data);
         
-        // 성공 시 홈 페이지로 리다이렉트
-        this.$router.push('/');
+        // JWT 토큰 인증을 위한 처리
+        if (!response.data.access || !response.data.refresh) {
+          throw new Error('서버에서 인증 토큰을 받지 못했습니다.');
+        }
+        
+        // 토큰과 사용자 이름을 로컬 스토리지에 저장
+        localStorage.setItem('accessToken', response.data.access);
+        localStorage.setItem('refreshToken', response.data.refresh);
+        localStorage.setItem('username', this.loginForm.username);
+        
+        // 추가 디버깅 정보
+        console.log('인증 정보 저장 완료. 액세스 토큰:', response.data.access.substring(0, 10) + '...');
+        
+        // 리다이렉트 처리 추가
+        const redirectPath = this.$route.query.redirect || '/';
+        this.$router.push(redirectPath);
       } catch (error) {
         console.error('로그인 실패:', error);
-        this.errorMessage = '사용자 이름 또는 비밀번호가 올바르지 않습니다.';
+        
+        if (error.response) {
+          console.error('서버 응답:', error.response.status, error.response.data);
+          
+          if (error.response.status === 400) {
+            if (error.response.data.non_field_errors) {
+              this.errorMessage = error.response.data.non_field_errors[0];
+            } else {
+              this.errorMessage = '입력한 정보가 올바르지 않습니다. 다시 확인해주세요.';
+            }
+          } else if (error.response.status === 401) {
+            this.errorMessage = '로그인에 실패했습니다. 사용자 이름과 비밀번호를 확인해주세요.';
+          } else {
+            this.errorMessage = '로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+          }
+        } else if (error.request) {
+          this.errorMessage = '서버에 연결할 수 없습니다. 인터넷 연결을 확인하고 다시 시도해주세요.';
+        } else {
+          this.errorMessage = error.message || '알 수 없는 오류가 발생했습니다.';
+        }
       } finally {
         this.isLoading = false;
       }

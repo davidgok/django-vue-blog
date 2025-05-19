@@ -54,7 +54,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '../services/api';
 import { HOME_BG } from '../assets/img/placeholder.js';
 
 export default {
@@ -78,19 +78,18 @@ export default {
     async fetchPosts() {
       try {
         this.loading = true;
-        const response = await axios.get('http://localhost:8001/api/posts/');
+        const response = await api.posts.getAll();
         this.posts = response.data;
-        this.loading = false;
       } catch (error) {
         console.error('글 목록을 불러오는데 실패했습니다:', error);
         this.error = '게시글 목록을 불러오는데 실패했습니다.';
+      } finally {
         this.loading = false;
       }
     },
     async fetchBlogSettings() {
       try {
-        const response = await axios.get('http://localhost:8001/api/settings/');
-        // API에서 반환한 설정값으로 업데이트
+        const response = await api.settings.get();
         this.blogSettings = response.data;
       } catch (error) {
         console.error('블로그 설정을 불러오는데 실패했습니다:', error);

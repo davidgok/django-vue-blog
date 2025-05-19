@@ -1,6 +1,5 @@
 <template>
   <div id="app">
-    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light" id="mainNav">
       <div class="container px-4 px-lg-5">
         <router-link class="navbar-brand" to="/">null</router-link>
@@ -13,14 +12,12 @@
             <li class="nav-item"><router-link class="nav-link px-lg-3 py-3 py-lg-4" to="/">홈</router-link></li>
             <li class="nav-item"><router-link class="nav-link px-lg-3 py-3 py-lg-4" to="/categories">카테고리</router-link></li>
             
-            <!-- 로그인한 사용자 메뉴 -->
             <template v-if="isLoggedIn">
               <li class="nav-item"><router-link class="nav-link px-lg-3 py-3 py-lg-4" to="/write">글쓰기</router-link></li>
               <li class="nav-item"><router-link class="nav-link px-lg-3 py-3 py-lg-4" to="/manage">관리</router-link></li>
               <li class="nav-item"><a class="nav-link px-lg-3 py-3 py-lg-4" href="#" @click.prevent="logout">로그아웃</a></li>
             </template>
             
-            <!-- 로그인하지 않은 사용자 메뉴 -->
             <template v-else>
               <li class="nav-item"><router-link class="nav-link px-lg-3 py-3 py-lg-4" to="/login">로그인</router-link></li>
               <li class="nav-item"><router-link class="nav-link px-lg-3 py-3 py-lg-4" to="/register">회원가입</router-link></li>
@@ -30,10 +27,8 @@
       </div>
     </nav>
     
-    <!-- Page Content -->
     <router-view/>
     
-    <!-- Footer -->
     <footer class="border-top">
       <div class="container px-4 px-lg-5">
         <div class="row gx-4 gx-lg-5 justify-content-center">
@@ -88,20 +83,19 @@ export default {
   },
   methods: {
     checkLoginStatus() {
-      // 로컬 스토리지에서 토큰 확인
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       this.isLoggedIn = !!token;
     },
     logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('username');
+      // API를 통한 로그아웃 처리 (토큰 블랙리스트에 추가)
+      const api = require('./services/api').default;
+      api.auth.logout();
+      
       this.isLoggedIn = false;
-      // 로그아웃 후 홈페이지로 이동
       this.$router.push('/');
     }
   },
   watch: {
-    // 라우트 변경 시마다 로그인 상태 확인
     '$route'() {
       this.checkLoginStatus();
     }

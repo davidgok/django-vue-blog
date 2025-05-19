@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Page Header -->
-    <header class="masthead" style="background-image: url('/assets/img/home-bg.jpg')">
+    <header class="masthead" :style="{ backgroundImage: `url('${backgroundImage}')` }">
       <div class="container position-relative px-4 px-lg-5">
         <div class="row gx-4 gx-lg-5 justify-content-center">
           <div class="col-md-10 col-lg-8 col-xl-7">
@@ -67,7 +67,8 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '../services/api';
+import { HOME_BG } from '../assets/img/placeholder.js';
 
 export default {
   name: 'ForgotPasswordPage',
@@ -76,7 +77,8 @@ export default {
       email: '',
       isSubmitting: false,
       errorMessage: '',
-      successMessage: ''
+      successMessage: '',
+      backgroundImage: HOME_BG
     };
   },
   methods: {
@@ -86,31 +88,32 @@ export default {
       this.successMessage = '';
       
       try {
-        await axios.post('http://localhost:8001/api/auth/password-reset/', {
-          email: this.email
-        });
+        await api.auth.forgotPassword(this.email);
         
         this.successMessage = '비밀번호 재설정 링크가 이메일로 전송되었습니다. 받은편지함을 확인해주세요.';
         this.email = '';
       } catch (error) {
         console.error('비밀번호 찾기 요청 실패:', error);
-        
-        if (error.response && error.response.data) {
-          // 서버에서 반환한 에러 메시지 표시
-          if (typeof error.response.data === 'object') {
-            const messages = [];
-            for (const field in error.response.data) {
-              messages.push(`${field}: ${error.response.data[field]}`);
-            }
-            this.errorMessage = messages.join('\n');
-          } else {
-            this.errorMessage = error.response.data;
-          }
-        } else {
-          this.errorMessage = '서버와 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
-        }
+        this.handleError(error);
       } finally {
         this.isSubmitting = false;
+      }
+    },
+    
+    handleError(error) {
+      if (error.response && error.response.data) {
+        // 서버에서 반환한 에러 메시지 표시
+        if (typeof error.response.data === 'object') {
+          const messages = [];
+          for (const field in error.response.data) {
+            messages.push(`${field}: ${error.response.data[field]}`);
+          }
+          this.errorMessage = messages.join('\n');
+        } else {
+          this.errorMessage = error.response.data;
+        }
+      } else {
+        this.errorMessage = '서버와 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
       }
     }
   }

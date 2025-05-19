@@ -17,35 +17,25 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from blog.views import CategoryViewSet, PostViewSet, CommentViewSet, get_stats, get_settings, update_settings
+from blog.views import CategoryViewSet, PostViewSet, CommentViewSet, get_stats, get_settings, update_settings, user_profile, password_reset, password_reset_confirm
 from rest_framework.authtoken.views import obtain_auth_token
 from django.contrib.auth import views as auth_views
-from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.authtoken.models import Token
-from rest_framework.response import Response
-from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.contrib.auth.models import User
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+    TokenBlacklistView
+)
 
 router = DefaultRouter()
 router.register(r'categories', CategoryViewSet)
 router.register(r'posts', PostViewSet)
 router.register(r'comments', CommentViewSet)
-
-# 커스텀 토큰 인증 뷰
-class CustomAuthToken(ObtainAuthToken):
-    def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data,
-                                           context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user)
-        return Response({
-            'token': token.key,
-            'user_id': user.pk,
-            'username': user.username
-        })
 
 # 회원가입 API
 @api_view(['POST'])
@@ -79,10 +69,13 @@ def register(request):
         email=email
     )
     
-    token, created = Token.objects.get_or_create(user=user)
+    # JWT 토큰을 반환하도록 수정
+    from rest_framework_simplejwt.tokens import RefreshToken
+    refresh = RefreshToken.for_user(user)
     
     return Response({
-        "token": token.key,
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
         "username": user.username,
         "email": user.email
     }, status=status.HTTP_201_CREATED)
@@ -91,12 +84,22 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls')),
-    path('api/auth/login/', CustomAuthToken.as_view(), name='api_token_auth'),
+    
+    # JWT 인증 엔드포인트
+    path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('api/auth/token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
+    
+    # 기존 로그인 엔드포인트를 JWT로 대체 (호환성을 위해 유지)
+    path('api/auth/login/', TokenObtainPairView.as_view(), name='api_token_auth'),
+    
     path('api/auth/register/', register, name='register'),
     path('api/stats/', get_stats, name='blog_stats'),
     path('api/settings/', get_settings, name='get_settings'),
     path('api/settings/update/', update_settings, name='update_settings'),
-    # 비밀번호 재설정 API는 더 복잡한 구현이 필요하므로 주석으로 처리
-    # path('api/auth/password-reset/', password_reset, name='password_reset'),
-    # path('api/auth/password-reset/confirm/', password_reset_confirm, name='password_reset_confirm'),
+    path('api/user/profile/', user_profile, name='user_profile'),
+    # 비밀번호 재설정 API
+    path('api/auth/password-reset/', password_reset, name='password_reset'),
+    path('api/auth/password-reset/confirm/', password_reset_confirm, name='password_reset_confirm'),
 ]

@@ -1,8 +1,5 @@
 <template>
   <div>
-    <!-- 여기서는 App.vue의 네비게이션 바가 이미 렌더링되어 있습니다 -->
-    
-    <!-- 알림 메시지 (간결한 디자인) -->
     <div v-if="errorMessage" class="alert alert-danger rounded-0 mb-0 text-center py-2" style="z-index: 2000; position: relative;">
       {{ errorMessage }}
     </div>
@@ -10,12 +7,9 @@
       {{ successMessage }}
     </div>
     
-    <!-- 네비게이션 바와의 간격 조정 -->
     <div style="height: 56px;"></div>
     
-    <!-- 티스토리 스타일 편집기 영역 -->
     <div class="container py-4">
-      <!-- 카테고리 선택과 버튼 영역 - 고정 위치로 설정하고 z-index를 높임 -->
       <div class="d-flex align-items-center pb-3 mb-4 border-bottom" 
           style="z-index: 2000; background-color: #fff; position: sticky; top: 56px; padding-top: 15px; width: 100%;">
         <select 
@@ -23,7 +17,7 @@
           style="width: 150px;" 
           v-model="postForm.category"
         >
-          <option value="" disabled selected>카테고리</option>
+          <option value="" disabled selected>카테고리 *</option>
           <option 
             v-for="category in categories" 
             :key="category.id" 
@@ -32,8 +26,6 @@
             {{ category.name }}
           </option>
         </select>
-        
-        <!-- 오른쪽에 버튼들 -->
         <div class="ms-auto">
           <button
             type="button" 
@@ -73,7 +65,7 @@
           class="form-control border-0 fs-4 fw-medium p-0" 
           id="title" 
           v-model="postForm.title" 
-          placeholder="제목을 입력하세요" 
+          placeholder="제목을 입력하세요 *" 
           required
           style="outline: none; box-shadow: none; border-radius: 0;"
         >
@@ -83,62 +75,85 @@
       <div class="editor-toolbar d-flex py-2 px-3 bg-light rounded mb-4 align-items-center position-relative" style="z-index: 800;">
         <!-- 기본 서식 도구 -->
         <div class="btn-group me-2">
-          <button @click.prevent="formatDoc('bold')" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="formatDoc('bold')" type="button" 
+                 :class="['btn btn-sm btn-light', { 'active': formatState.bold }]" 
+                 data-bs-toggle="tooltip" data-bs-title="굵게">
             <strong>B</strong>
           </button>
-          <button @click.prevent="formatDoc('italic')" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="formatDoc('italic')" type="button" 
+                 :class="['btn btn-sm btn-light', { 'active': formatState.italic }]"
+                 data-bs-toggle="tooltip" data-bs-title="기울임">
             <i>I</i>
           </button>
-          <button @click.prevent="formatDoc('underline')" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="formatDoc('underline')" type="button" 
+                 :class="['btn btn-sm btn-light', { 'active': formatState.underline }]"
+                 data-bs-toggle="tooltip" data-bs-title="밑줄">
             <u>U</u>
           </button>
-          <button @click.prevent="formatDoc('strikeThrough')" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="formatDoc('strikeThrough')" type="button" 
+                 :class="['btn btn-sm btn-light', { 'active': formatState.strikeThrough }]"
+                 data-bs-toggle="tooltip" data-bs-title="취소선">
             S
           </button>
         </div>
         
         <!-- 정렬 도구 -->
         <div class="btn-group me-2">
-          <button @click.prevent="formatDoc('justifyLeft')" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="formatDoc('justifyLeft')" type="button" 
+                 :class="['btn btn-sm btn-light', { 'active': formatState.justifyLeft }]"
+                 data-bs-toggle="tooltip" data-bs-title="왼쪽 정렬">
             <i class="fas fa-align-left"></i>
           </button>
-          <button @click.prevent="formatDoc('justifyCenter')" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="formatDoc('justifyCenter')" type="button" 
+                 :class="['btn btn-sm btn-light', { 'active': formatState.justifyCenter }]"
+                 data-bs-toggle="tooltip" data-bs-title="가운데 정렬">
             <i class="fas fa-align-center"></i>
           </button>
-          <button @click.prevent="formatDoc('justifyRight')" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="formatDoc('justifyRight')" type="button" 
+                 :class="['btn btn-sm btn-light', { 'active': formatState.justifyRight }]"
+                 data-bs-toggle="tooltip" data-bs-title="오른쪽 정렬">
             <i class="fas fa-align-right"></i>
           </button>
         </div>
         
         <!-- 목록 도구 -->
         <div class="btn-group me-2">
-          <button @click.prevent="formatDoc('insertUnorderedList')" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="formatDoc('insertUnorderedList')" type="button" 
+                 :class="['btn btn-sm btn-light', { 'active': formatState.insertUnorderedList }]"
+                 data-bs-toggle="tooltip" data-bs-title="순서 없는 목록">
             <i class="fas fa-list-ul"></i>
           </button>
-          <button @click.prevent="formatDoc('insertOrderedList')" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="formatDoc('insertOrderedList')" type="button" 
+                 :class="['btn btn-sm btn-light', { 'active': formatState.insertOrderedList }]"
+                 data-bs-toggle="tooltip" data-bs-title="순서 있는 목록">
             <i class="fas fa-list-ol"></i>
           </button>
         </div>
         
         <!-- 미디어 및 특수 도구 -->
         <div class="btn-group me-2">
-          <button @click.prevent="insertLink()" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="insertLink()" type="button" class="btn btn-sm btn-light" 
+                 data-bs-toggle="tooltip" data-bs-title="링크 삽입">
             <i class="fas fa-link"></i>
           </button>
-          <button @click.prevent="insertImage()" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="insertImage()" type="button" class="btn btn-sm btn-light" 
+                 data-bs-toggle="tooltip" data-bs-title="이미지 삽입">
             <i class="fas fa-image"></i>
           </button>
-          <button @click.prevent="insertTable()" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="insertTable()" type="button" class="btn btn-sm btn-light" 
+                 data-bs-toggle="tooltip" data-bs-title="표 삽입">
             <i class="fas fa-table"></i>
           </button>
-          <button @click.prevent="insertHr()" type="button" class="btn btn-sm btn-light">
+          <button @click.prevent="insertHr()" type="button" class="btn btn-sm btn-light" 
+                 data-bs-toggle="tooltip" data-bs-title="구분선 삽입">
             <i class="fas fa-minus"></i>
           </button>
         </div>
         
         <!-- 글꼴 및 본문 스타일 (드롭다운) -->
         <div class="dropdown">
-          <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+          <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" 
+                 data-bs-title="더 많은 옵션">
             <i class="fas fa-ellipsis-h"></i>
           </button>
           <ul class="dropdown-menu">
@@ -159,8 +174,11 @@
         class="editor-content position-relative"
         contenteditable="true"
         @input="handleEditorInput"
+        @mouseup="checkFormatState"
+        @keyup="checkFormatState"
         ref="editorContent"
         style="z-index: 500; margin-top: 15px;"
+        placeholder="내용을 입력하세요 *"
       ></div>
       
       <!-- 태그 입력 영역 (티스토리 스타일) -->
@@ -236,8 +254,10 @@
 </template>
 
 <script>
-import axios from 'axios';
+import * as bootstrap from 'bootstrap';
 import { HOME_BG, POST_BG, ABOUT_BG, CONTACT_BG } from '../assets/img/placeholder.js';
+import { slugify } from '../utils/slugify';
+import api from '../services/api';
 
 export default {
   name: 'PostWritePage',
@@ -261,13 +281,24 @@ export default {
       tags: [],
       backgroundImage: POST_BG,
       availableCoverImages: [HOME_BG, POST_BG, ABOUT_BG, CONTACT_BG],
-      selectedCoverImage: null
+      selectedCoverImage: null,
+      formatState: {
+        bold: false,
+        italic: false,
+        underline: false,
+        strikeThrough: false,
+        justifyLeft: false,
+        justifyCenter: false,
+        justifyRight: false,
+        insertUnorderedList: false,
+        insertOrderedList: false
+      }
     };
   },
   watch: {
     'postForm.title': function(newTitle) {
       // 제목이 변경될 때마다 slug 자동 생성
-      this.postForm.slug = this.slugify(newTitle);
+      this.postForm.slug = slugify(newTitle, 'post');
     }
   },
   created() {
@@ -278,11 +309,25 @@ export default {
     // 초기 에디터 내용 설정
     if (this.$refs.editorContent) {
       this.$refs.editorContent.innerHTML = this.postForm.content;
+      // 초기 서식 상태 확인
+      this.$nextTick(() => {
+        this.checkFormatState();
+      });
     }
+    
+    // Bootstrap 툴팁 초기화
+    this.$nextTick(() => {
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl, {
+          delay: { show: 100, hide: 0 }  // 표시는 빠르게, 사라짐도 빠르게
+        });
+      });
+    });
   },
   methods: {
     checkAuthentication() {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) {
         // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
         this.$router.push('/login');
@@ -291,53 +336,49 @@ export default {
     },
     async fetchCategories() {
       try {
-        const response = await axios.get('http://localhost:8001/api/categories/');
+        const response = await api.categories.getAll();
         this.categories = response.data;
       } catch (error) {
         console.error('카테고리를 불러오는데 실패했습니다:', error);
-        this.errorMessage = '카테고리를 불러오는데 실패했습니다. 나중에 다시 시도해주세요.';
+        this.showError('카테고리를 불러오는데 실패했습니다. 나중에 다시 시도해주세요.');
       }
-    },
-    slugify(text) {
-      // 텍스트가 없으면 빈 문자열 반환
-      if (!text) return '';
-      
-      // 한글, 영문, 숫자를 URL 친화적인 형태로 변환
-      return text
-        .toString()
-        .toLowerCase()
-        .replace(/\s+/g, '-')     // 공백을 하이픈으로 변환
-        .replace(/[^\w-]+/g, '')  // 영문, 숫자, 하이픈이 아닌 문자 제거
-        .replace(/--+/g, '-')     // 여러 개의 하이픈을 하나로 변환
-        .replace(/^-+/, '')       // 시작 부분의 하이픈 제거
-        .replace(/-+$/, '');      // 끝 부분의 하이픈 제거
     },
     formatDoc(command, value = null) {
       document.execCommand(command, false, value);
       this.$refs.editorContent.focus();
       this.handleEditorInput();
+      this.checkFormatState();
     },
     formatFont(fontName) {
-      if(fontName) {
-        this.formatDoc('fontName', fontName);
-      }
+      this.formatDoc('fontName', fontName);
     },
     formatHeading(heading) {
-      if(heading) {
-        this.formatDoc('formatBlock', `<${heading}>`);
+      this.formatDoc('formatBlock', `<${heading}>`);
+    },
+    insertMedia(type) {
+      let url, promptText;
+      
+      switch(type) {
+        case 'link':
+          promptText = '링크 URL을 입력하세요:';
+          url = prompt(promptText, 'http://');
+          if (url) this.formatDoc('createLink', url);
+          break;
+        case 'image':
+          promptText = '이미지 URL을 입력하세요:';
+          url = prompt(promptText, 'http://');
+          if (url) this.formatDoc('insertImage', url);
+          break;
+        case 'hr':
+          this.formatDoc('insertHorizontalRule');
+          break;
       }
     },
     insertLink() {
-      const url = prompt('링크 URL을 입력하세요:', 'http://');
-      if (url) {
-        this.formatDoc('createLink', url);
-      }
+      this.insertMedia('link');
     },
     insertImage() {
-      const url = prompt('이미지 URL을 입력하세요:', 'http://');
-      if (url) {
-        this.formatDoc('insertImage', url);
-      }
+      this.insertMedia('image');
     },
     insertTable() {
       const rows = prompt('행 수를 입력하세요:', '3');
@@ -367,7 +408,7 @@ export default {
       }
     },
     insertHr() {
-      this.formatDoc('insertHorizontalRule');
+      this.insertMedia('hr');
     },
     handleEditorInput() {
       // 에디터 내용을 form data에 업데이트
@@ -394,30 +435,43 @@ export default {
       this.selectedCoverImage = this.availableCoverImages[randomIndex];
       this.postForm.cover_image = this.selectedCoverImage;
     },
+    showError(message, duration = 5000) {
+      this.errorMessage = message;
+      setTimeout(() => {
+        this.errorMessage = '';
+      }, duration);
+    },
+    showSuccess(message, duration = 3000) {
+      this.successMessage = message;
+      setTimeout(() => {
+        this.successMessage = '';
+      }, duration);
+    },
     saveAsDraft() {
+      if (!this.validateForm()) {
+        return;
+      }
+      
       this.postForm.is_published = false;
       this.submitPost();
     },
     async submitPost() {
+      if (!this.validateForm()) {
+        return;
+      }
+
       this.isSubmitting = true;
       this.errorMessage = '';
       this.successMessage = '';
       
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          this.errorMessage = '로그인이 필요합니다.';
-          this.$router.push('/login');
-          return;
-        }
-        
         // 최종 내용 업데이트
         this.postForm.content = this.$refs.editorContent.innerHTML;
         this.updateTagsInForm();
         
         // 슬러그가 없는 경우 제목에서 생성
         if (!this.postForm.slug && this.postForm.title) {
-          this.postForm.slug = this.slugify(this.postForm.title);
+          this.postForm.slug = slugify(this.postForm.title, 'post');
         }
         
         // 선택한 커버 이미지 설정
@@ -425,39 +479,51 @@ export default {
           this.postForm.cover_image = this.selectedCoverImage;
         }
         
-        const response = await axios.post(
-          'http://localhost:8001/api/posts/', 
-          this.postForm,
-          {
-            headers: {
-              Authorization: `Token ${token}`
-            }
-          }
-        );
+        // API 서비스를 통한 요청
+        const postData = {
+          title: this.postForm.title,
+          content: this.postForm.content,
+          category: this.postForm.category,
+          is_published: this.postForm.is_published,
+          slug: this.postForm.slug,
+          subtitle: this.postForm.subtitle,
+          cover_image: this.postForm.cover_image,
+          tags: this.postForm.tags
+        };
         
-        this.successMessage = '글이 성공적으로 등록되었습니다.';
-        // 성공 후 메시지 표시 후 홈페이지로 이동
+        let response;
+        
+        if (this.postForm.id) {
+          // 기존 글 수정
+          response = await api.posts.update(this.postForm.slug, postData);
+          this.showSuccess('글이 성공적으로 수정되었습니다.');
+        } else {
+          // 새 글 작성
+          response = await api.posts.create(postData);
+          this.showSuccess('글이 성공적으로 등록되었습니다.');
+        }
+        
+        // 성공 후 메시지 표시 후 글 상세 페이지로 이동
         setTimeout(() => {
           this.$router.push(`/post/${response.data.slug}`);
         }, 1500);
       } catch (error) {
         console.error('글 등록 실패:', error);
         
+        // 서버에서 반환된 오류 메시지 처리
         if (error.response && error.response.data) {
-          // 서버에서 반환한 에러 메시지 표시
-          const errorData = error.response.data;
-          if (typeof errorData === 'object') {
-            // 필드별 에러 메시지 구성
+          if (typeof error.response.data === 'object') {
+            // 필드별 오류 메시지 구성
             const messages = [];
-            for (const field in errorData) {
-              messages.push(`${field}: ${errorData[field]}`);
+            for (const field in error.response.data) {
+              messages.push(`${field}: ${error.response.data[field]}`);
             }
-            this.errorMessage = messages.join('\n');
+            this.showError(messages.join(' / '));
           } else {
-            this.errorMessage = errorData;
+            this.showError(error.response.data);
           }
         } else {
-          this.errorMessage = '서버와 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+          this.showError('글 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
         }
       } finally {
         this.isSubmitting = false;
@@ -473,37 +539,87 @@ export default {
       this.errorMessage = '';
       
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          this.errorMessage = '로그인이 필요합니다.';
-          this.$router.push('/login');
-          return;
-        }
-        
         // 새 글인 경우는 그냥 홈으로 이동
         if (!this.postForm.id) {
           this.$router.push('/');
           return;
         }
         
-        // 기존 글 삭제 API 호출
-        await axios.delete(
-          `http://localhost:8001/api/posts/${this.postForm.id}/`, 
-          {
-            headers: {
-              Authorization: `Token ${token}`
-            }
-          }
-        );
+        // slug가 없는 경우 처리
+        if (!this.postForm.slug) {
+          this.showError('게시물 식별자가 유효하지 않습니다.');
+          this.isSubmitting = false;
+          return;
+        }
         
-        // 삭제 성공 후 홈페이지로 이동
-        this.$router.push('/');
+        try {
+          // 기존 글 삭제 API 호출
+          await api.posts.delete(this.postForm.slug);
+          
+          // 삭제 성공 후 홈페이지로 이동
+          this.$router.push('/');
+        } catch (error) {
+          // 404 오류 처리 (게시물이 이미 삭제된 경우)
+          if (error.response && error.response.status === 404) {
+            this.showError('삭제할 게시물을 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.');
+          } else {
+            throw error; // 다른 오류는 상위 catch로 전달
+          }
+        }
       } catch (error) {
         console.error('글 삭제 실패:', error);
-        this.errorMessage = '글 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        
+        // 오류 메시지 구성
+        let errorMessage = '글 삭제 중 오류가 발생했습니다.';
+        
+        if (error.response && error.response.data) {
+          if (typeof error.response.data === 'object' && error.response.data.error) {
+            errorMessage = error.response.data.error;
+          } else if (typeof error.response.data === 'string') {
+            errorMessage = error.response.data;
+          }
+        }
+        
+        this.showError(errorMessage);
       } finally {
         this.isSubmitting = false;
       }
+    },
+    checkFormatState() {
+      this.formatState.bold = document.queryCommandState('bold');
+      this.formatState.italic = document.queryCommandState('italic');
+      this.formatState.underline = document.queryCommandState('underline');
+      this.formatState.strikeThrough = document.queryCommandState('strikeThrough');
+      this.formatState.justifyLeft = document.queryCommandState('justifyLeft');
+      this.formatState.justifyCenter = document.queryCommandState('justifyCenter');
+      this.formatState.justifyRight = document.queryCommandState('justifyRight');
+      this.formatState.insertUnorderedList = document.queryCommandState('insertUnorderedList');
+      this.formatState.insertOrderedList = document.queryCommandState('insertOrderedList');
+    },
+    validateForm() {
+      this.errorMessage = '';
+
+      if (!this.postForm.title || this.postForm.title.trim() === '') {
+        this.showError('제목을 입력해주세요.');
+        return false;
+      }
+      
+      if (!this.postForm.category) {
+        this.showError('카테고리를 선택해주세요.');
+        return false;
+      }
+      
+      if (!this.postForm.content || this.postForm.content.trim() === '') {
+        this.showError('내용을 입력해주세요.');
+        return false;
+      }
+      
+      // 슬러그 유효성 검사 - 자동 생성되었는지 확인
+      if (!this.postForm.slug) {
+        this.postForm.slug = slugify(this.postForm.title, 'post');
+      }
+      
+      return true;
     }
   }
 }
@@ -639,5 +755,40 @@ export default {
 
 .thumbnail-container:hover .thumbnail-btn {
   opacity: 1;
+}
+
+.editor-toolbar .btn-light.active {
+  background-color: #212529 !important;
+  color: white !important;
+  border-color: #212529 !important;
+}
+
+.editor-toolbar .btn-light.active i {
+  color: white !important;
+}
+
+.editor-toolbar .btn-light:hover {
+  background-color: rgba(0,0,0,0.05);
+}
+</style>
+
+<style>
+/* 툴팁 스타일 개선 - 전역 스타일 */
+.tooltip {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.75rem;
+  opacity: 1 !important;
+}
+
+.tooltip .tooltip-inner {
+  background-color: #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 3px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.tooltip .tooltip-arrow {
+  display: none;
 }
 </style> 

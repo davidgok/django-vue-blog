@@ -78,7 +78,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '../services/api';
 import { POST_BG } from '../assets/img/placeholder.js';
 
 export default {
@@ -98,12 +98,12 @@ export default {
       try {
         this.loading = true;
         const slug = this.$route.params.slug;
-        const response = await axios.get(`http://localhost:8001/api/posts/${slug}/`);
+        const response = await api.posts.get(slug);
         this.post = response.data;
-        this.loading = false;
       } catch (error) {
         console.error('게시글을 불러오는데 실패했습니다:', error);
         this.error = '게시글을 불러오는데 실패했습니다.';
+      } finally {
         this.loading = false;
       }
     },

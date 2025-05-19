@@ -26,35 +26,35 @@
             <div class="list-group list-group-flush">
               <a 
                 href="#" 
-                @click.prevent="activePage = 'dashboard'" 
+                @click.prevent="setActivePage('dashboard')" 
                 :class="['list-group-item list-group-item-action', activePage === 'dashboard' ? 'active' : '']"
               >
                 <i class="fas fa-tachometer-alt me-2"></i> 블로그 관리 홈
               </a>
               <a 
                 href="#" 
-                @click.prevent="activePage = 'posts'" 
+                @click.prevent="setActivePage('posts')" 
                 :class="['list-group-item list-group-item-action', activePage === 'posts' ? 'active' : '']"
               >
                 <i class="fas fa-file-alt me-2"></i> 글 관리
               </a>
               <a 
                 href="#" 
-                @click.prevent="activePage = 'categories'" 
+                @click.prevent="setActivePage('categories')" 
                 :class="['list-group-item list-group-item-action', activePage === 'categories' ? 'active' : '']"
               >
                 <i class="fas fa-tags me-2"></i> 카테고리 관리
               </a>
               <a 
                 href="#" 
-                @click.prevent="activePage = 'profile'" 
+                @click.prevent="setActivePage('profile')" 
                 :class="['list-group-item list-group-item-action', activePage === 'profile' ? 'active' : '']"
               >
                 <i class="fas fa-user me-2"></i> 프로필 설정
               </a>
               <a 
                 href="#" 
-                @click.prevent="activePage = 'settings'" 
+                @click.prevent="setActivePage('settings')" 
                 :class="['list-group-item list-group-item-action', activePage === 'settings' ? 'active' : '']"
               >
                 <i class="fas fa-cog me-2"></i> 블로그 설정
@@ -184,10 +184,33 @@
                   <button class="btn btn-outline-secondary" type="button">
                     <i class="fas fa-search"></i>
                   </button>
+                  <button @click="refreshPosts" class="btn btn-outline-primary" type="button" :disabled="loadingPosts">
+                    <i class="fas fa-sync-alt" :class="{'fa-spin': loadingPosts}"></i>
+                    새로고침
+                  </button>
                 </div>
               </div>
 
-              <div class="table-responsive">
+              <!-- 로딩 중 표시 -->
+              <div v-if="loadingPosts" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3 text-muted">게시물 목록을 불러오는 중입니다...</p>
+              </div>
+              
+              <!-- 게시물이 없는 경우 -->
+              <div v-else-if="posts.length === 0" class="text-center p-5 border rounded bg-light">
+                <i class="fas fa-pen-fancy mb-3 text-muted" style="font-size: 2rem;"></i>
+                <h5>작성한 게시물이 없습니다</h5>
+                <p class="text-muted">새 글을 작성해보세요!</p>
+                <router-link to="/write" class="btn btn-primary">
+                  <i class="fas fa-plus me-1"></i> 첫 게시물 작성하기
+                </router-link>
+              </div>
+
+              <!-- 게시물 목록 -->
+              <div v-else class="table-responsive">
                 <table class="table table-striped table-hover">
                   <thead>
                     <tr>
@@ -392,8 +415,9 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '../services/api';
 import { POST_BG } from '../assets/img/placeholder.js';
+import { slugify } from '../utils/slugify';
 
 export default {
   name: 'ManagePage',
@@ -458,11 +482,12 @@ export default {
   },
   created() {
     this.checkAuthentication();
-    this.fetchData();
+    // 대시보드가 기본 활성화되어 있으므로 대시보드 데이터만 로드
+    this.fetchStats();
   },
   methods: {
     checkAuthentication() {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) {
         // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
         this.$router.push('/login');
@@ -480,14 +505,9 @@ export default {
       try {
         this.loadingStats = true;
         this.statsError = false;
-        const token = localStorage.getItem('token');
         
-        // 실제 통계 API 호출
-        const response = await axios.get('http://localhost:8001/api/stats/', {
-          headers: {
-            Authorization: `Token ${token}`
-          }
-        });
+        // API 서비스를 통한 통계 정보 호출
+        const response = await api.stats.get();
         
         // 서버에서 받은 데이터로 통계 및 최근 활동 업데이트
         this.stats = response.data.stats;
@@ -537,24 +557,38 @@ export default {
     async fetchPosts() {
       try {
         this.loadingPosts = true;
-        const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:8001/api/posts/my_posts/', {
-          headers: {
-            Authorization: `Token ${token}`
-          }
-        });
+        this.errorMessage = '';
+        
+        // 내 게시물 API 호출
+        const response = await api.posts.getMyPosts();
         this.posts = response.data;
+        
+        // 게시물 수 확인 및 로깅
+        console.log(`${this.posts.length}개의 게시물을 불러왔습니다.`);
+        
         this.loadingPosts = false;
       } catch (error) {
         console.error('글 목록을 불러오는데 실패했습니다:', error);
-        this.errorMessage = '글 목록을 불러오는데 실패했습니다.';
+        
+        if (error.response && error.response.status === 401) {
+          this.showMessage('인증 정보가 만료되었습니다. 다시 로그인해주세요.', true);
+          localStorage.removeItem('accessToken');
+          this.$router.push('/login');
+        } else if (error.response && error.response.status === 404) {
+          this.showMessage('API 엔드포인트를 찾을 수 없습니다.', true);
+        } else {
+          this.showMessage('글 목록을 불러오는데 실패했습니다.', true);
+        }
+        
+        // 빈 배열로 설정
+        this.posts = [];
         this.loadingPosts = false;
       }
     },
     async fetchCategories() {
       try {
         this.loadingCategories = true;
-        const response = await axios.get('http://localhost:8001/api/categories/');
+        const response = await api.categories.getAll();
         // 카테고리에 편집 상태 속성 추가
         this.categories = response.data.map(category => ({
           ...category,
@@ -570,29 +604,23 @@ export default {
     },
     async fetchProfile() {
       try {
-        // API 엔드포인트가 구현되어 있다면 실제 데이터를 가져오도록 수정
-        // const token = localStorage.getItem('token');
-        // const response = await axios.get('http://localhost:8001/api/profile/', {
-        //   headers: {
-        //     Authorization: `Token ${token}`
-        //   }
-        // });
-        // this.profile = response.data;
-        
-        // 임시 데이터
+        // 프로필 정보 API 호출
+        const response = await api.user.getProfile();
+        this.profile = response.data;
+      } catch (error) {
+        console.error('프로필 정보를 불러오는데 실패했습니다:', error);
+        // API 엔드포인트가 아직 구현되지 않았거나 호출에 실패한 경우 임시 데이터 사용
         this.profile = {
           username: 'user123',
           email: 'user@example.com',
           name: '홍길동',
           bio: '블로그 운영자입니다.'
         };
-      } catch (error) {
-        console.error('프로필 정보를 불러오는데 실패했습니다:', error);
       }
     },
     async fetchSettings() {
       try {
-        const response = await axios.get('http://localhost:8001/api/settings/');
+        const response = await api.settings.get();
         this.settings = response.data;
       } catch (error) {
         console.error('블로그 설정을 불러오는데 실패했습니다:', error);
@@ -615,21 +643,12 @@ export default {
         this.errorMessage = '';
         this.successMessage = '';
         
-        const token = localStorage.getItem('token');
-        const slugName = this.slugify(this.newCategoryName);
+        const slugName = slugify(this.newCategoryName);
         
-        const response = await axios.post(
-          'http://localhost:8001/api/categories/',
-          {
-            name: this.newCategoryName,
-            slug: slugName
-          },
-          {
-            headers: {
-              Authorization: `Token ${token}`
-            }
-          }
-        );
+        const response = await api.categories.create({
+          name: this.newCategoryName,
+          slug: slugName
+        });
         
         // 새 카테고리를 목록에 추가 (편집 상태 속성 포함)
         this.categories.push({
@@ -678,22 +697,12 @@ export default {
         this.errorMessage = '';
         this.successMessage = '';
         
-        const token = localStorage.getItem('token');
-        
         // 이름이 변경된 경우에만 API 호출
         if (category.name !== category.editName) {
-          const response = await axios.put(
-            `http://localhost:8001/api/categories/${category.slug}/`,
-            {
-              name: category.editName,
-              slug: category.slug
-            },
-            {
-              headers: {
-                Authorization: `Token ${token}`
-              }
-            }
-          );
+          const response = await api.categories.update(category.slug, {
+            name: category.editName,
+            slug: category.slug
+          });
           
           // 카테고리 이름 업데이트
           category.name = response.data.name;
@@ -719,19 +728,11 @@ export default {
         this.errorMessage = '';
         this.successMessage = '';
         
-        const token = localStorage.getItem('token');
         const category = this.categories.find(c => c.id === categoryId);
         
         if (!category) return;
         
-        await axios.delete(
-          `http://localhost:8001/api/categories/${category.slug}/`,
-          {
-            headers: {
-              Authorization: `Token ${token}`
-            }
-          }
-        );
+        await api.categories.delete(category.slug);
         
         // 삭제된 카테고리를 목록에서 제거
         this.categories = this.categories.filter(c => c.id !== categoryId);
@@ -770,19 +771,35 @@ export default {
         this.errorMessage = '';
         this.successMessage = '';
         
-        const token = localStorage.getItem('token');
         const post = this.posts.find(p => p.id === postId);
         
-        if (!post) return;
+        if (!post) {
+          this.errorMessage = '삭제할 게시물을 찾을 수 없습니다.';
+          return;
+        }
+
+        if (!post.slug) {
+          this.errorMessage = '게시물 식별자가 유효하지 않습니다.';
+          return;
+        }
         
-        await axios.delete(
-          `http://localhost:8001/api/posts/${post.slug}/`,
-          {
-            headers: {
-              Authorization: `Token ${token}`
-            }
+        console.log(`게시물 삭제 요청: ID=${post.id}, 제목=${post.title}, 슬러그=${post.slug}`);
+        
+        // 실제로 존재하는 게시물인지 확인하기 위해 먼저 조회
+        try {
+          await api.posts.get(post.slug);
+        } catch (fetchError) {
+          if (fetchError.response && fetchError.response.status === 404) {
+            console.error(`게시물 ${post.slug}이(가) 서버에 존재하지 않습니다`);
+            // 로컬 목록에서만 제거
+            this.posts = this.posts.filter(p => p.id !== postId);
+            this.errorMessage = `게시물 ${post.title}이(가) 이미 삭제되었습니다. 목록을 갱신합니다.`;
+            return;
           }
-        );
+        }
+        
+        // 삭제 API 호출
+        await api.posts.delete(post.slug);
         
         // 삭제된 글을 목록에서 제거
         this.posts = this.posts.filter(p => p.id !== postId);
@@ -792,7 +809,20 @@ export default {
         this.stats.posts--;
       } catch (error) {
         console.error('글 삭제 실패:', error);
-        this.errorMessage = '글 삭제 중 오류가 발생했습니다.';
+        
+        if (error.response && error.response.status === 404) {
+          this.errorMessage = '삭제할 게시물을 찾을 수 없습니다. 다시 시도하거나 페이지를 새로고침해 주세요.';
+          // 로컬 목록에서 삭제
+          const post = this.posts.find(p => p.id === postId);
+          if (post) {
+            this.posts = this.posts.filter(p => p.id !== postId);
+            this.errorMessage += ' (목록에서 제거됨)';
+          }
+        } else {
+          this.errorMessage = '글 삭제 중 오류가 발생했습니다: ' + 
+                             (error.response && error.response.data ? 
+                              JSON.stringify(error.response.data) : error.message);
+        }
       } finally {
         this.loadingPosts = false;
       }
@@ -803,26 +833,14 @@ export default {
         this.errorMessage = '';
         this.successMessage = '';
         
-        // API 엔드포인트가 구현되어 있다면 실제 데이터를 업데이트하도록 수정
-        // const token = localStorage.getItem('token');
-        // await axios.put(
-        //   'http://localhost:8001/api/profile/',
-        //   this.profile,
-        //   {
-        //     headers: {
-        //       Authorization: `Token ${token}`
-        //     }
-        //   }
-        // );
+        // API로 프로필 업데이트
+        await api.user.updateProfile(this.profile);
         
-        // 임시 성공 메시지
-        setTimeout(() => {
-          this.successMessage = '프로필이 성공적으로 업데이트되었습니다.';
-          this.loadingCategories = false;
-        }, 500);
+        this.successMessage = '프로필이 성공적으로 업데이트되었습니다.';
       } catch (error) {
         console.error('프로필 업데이트 실패:', error);
         this.errorMessage = '프로필 업데이트 중 오류가 발생했습니다.';
+      } finally {
         this.loadingCategories = false;
       }
     },
@@ -832,42 +850,20 @@ export default {
         this.errorMessage = '';
         this.successMessage = '';
         
-        const token = localStorage.getItem('token');
-        
         // API로 설정 업데이트
-        const response = await axios.put(
-          'http://localhost:8001/api/settings/update/',
-          this.settings,
-          {
-            headers: {
-              Authorization: `Token ${token}`
-            }
-          }
-        );
+        const response = await api.settings.update(this.settings);
         
         // 설정 저장 성공
         this.successMessage = '블로그 설정이 성공적으로 저장되었습니다.';
-        this.loadingCategories = false;
         
         // 메인 페이지에 설정 적용을 위해 이벤트 발생 또는 로컬 스토리지에 저장
         localStorage.setItem('blogSettings', JSON.stringify(response.data));
-        
       } catch (error) {
         console.error('설정 저장 실패:', error);
         this.errorMessage = '설정 저장 중 오류가 발생했습니다.';
+      } finally {
         this.loadingCategories = false;
       }
-    },
-    slugify(text) {
-      // 한글, 영문, 숫자를 URL 친화적인 형태로 변환
-      return text
-        .toString()
-        .toLowerCase()
-        .replace(/\s+/g, '-')     // 공백을 하이픈으로 변환
-        .replace(/[^\w-]+/g, '')  // 영문, 숫자, 하이픈이 아닌 문자 제거
-        .replace(/--+/g, '-')     // 여러 개의 하이픈을 하나로 변환
-        .replace(/^-+/, '')       // 시작 부분의 하이픈 제거
-        .replace(/-+$/, '');      // 끝 부분의 하이픈 제거
     },
     getPercentage(postCount) {
       const total = this.getTotalPosts();
@@ -877,6 +873,56 @@ export default {
     getTotalPosts() {
       // 모든 카테고리의 글 수 합계
       return this.categoryStats.reduce((sum, stat) => sum + stat.post_count, 0);
+    },
+    refreshPosts() {
+      console.log("게시물 목록 새로고침");
+      this.fetchPosts();
+      this.successMessage = "게시물 목록을 새로고침했습니다.";
+      setTimeout(() => {
+        this.successMessage = '';
+      }, 2000);
+    },
+    showMessage(message, isError = false, duration = 3000) {
+      if (isError) {
+        this.errorMessage = message;
+        this.successMessage = '';
+      } else {
+        this.successMessage = message;
+        this.errorMessage = '';
+      }
+      
+      setTimeout(() => {
+        if (isError) {
+          this.errorMessage = '';
+        } else {
+          this.successMessage = '';
+        }
+      }, duration);
+    },
+    setActivePage(page) {
+      // 이전 페이지와 같은 경우 중복 로드 방지
+      if (this.activePage === page) return;
+      
+      this.activePage = page;
+      
+      // 각 페이지에 필요한 데이터만 선택적으로 로드
+      switch(page) {
+        case 'dashboard':
+          this.fetchStats();
+          break;
+        case 'posts':
+          this.fetchPosts();
+          break;
+        case 'categories':
+          this.fetchCategories();
+          break;
+        case 'profile':
+          this.fetchProfile();
+          break;
+        case 'settings':
+          this.fetchSettings();
+          break;
+      }
     }
   }
 }

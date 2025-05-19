@@ -49,7 +49,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '../services/api';
 import { ABOUT_BG } from '../assets/img/placeholder.js';
 
 export default {
@@ -68,12 +68,12 @@ export default {
     async fetchCategories() {
       try {
         this.loading = true;
-        const response = await axios.get('http://localhost:8001/api/categories/');
+        const response = await api.categories.getAll();
         this.categories = response.data;
-        this.loading = false;
       } catch (error) {
         console.error('카테고리 목록을 불러오는데 실패했습니다:', error);
         this.error = '카테고리 목록을 불러오는데 실패했습니다.';
+      } finally {
         this.loading = false;
       }
     }

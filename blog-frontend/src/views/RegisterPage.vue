@@ -109,7 +109,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '../services/api';
 import { ABOUT_BG } from '../assets/img/placeholder.js';
 
 export default {
@@ -142,8 +142,7 @@ export default {
       this.successMessage = '';
       
       try {
-        // Django REST 회원가입 API를 호출
-        await axios.post('http://localhost:8001/api/auth/register/', {
+        await api.auth.register({
           username: this.registerForm.username,
           email: this.registerForm.email,
           password: this.registerForm.password
@@ -158,23 +157,27 @@ export default {
         }, 3000);
       } catch (error) {
         console.error('회원가입 실패:', error);
-        if (error.response && error.response.data) {
-          // 서버에서 반환한 에러 메시지 표시
-          const errorData = error.response.data;
-          if (errorData.username) {
-            this.errorMessage = `사용자 이름 오류: ${errorData.username[0]}`;
-          } else if (errorData.email) {
-            this.errorMessage = `이메일 오류: ${errorData.email[0]}`;
-          } else if (errorData.password) {
-            this.errorMessage = `비밀번호 오류: ${errorData.password[0]}`;
-          } else {
-            this.errorMessage = '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.';
-          }
+        this.handleError(error);
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    handleError(error) {
+      if (error.response && error.response.data) {
+        // 서버에서 반환한 에러 메시지 표시
+        const errorData = error.response.data;
+        if (errorData.username) {
+          this.errorMessage = `사용자 이름 오류: ${errorData.username[0]}`;
+        } else if (errorData.email) {
+          this.errorMessage = `이메일 오류: ${errorData.email[0]}`;
+        } else if (errorData.password) {
+          this.errorMessage = `비밀번호 오류: ${errorData.password[0]}`;
         } else {
           this.errorMessage = '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.';
         }
-      } finally {
-        this.isLoading = false;
+      } else {
+        this.errorMessage = '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.';
       }
     }
   }
