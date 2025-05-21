@@ -209,7 +209,6 @@ CACHES = {
 CACHE_MIDDLEWARE_SECONDS = 600  # 10 minutes
 CACHE_MIDDLEWARE_KEY_PREFIX = 'blog_backend'
 
-# 주석 처리된 부분을 해제하고 정보 입력
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
@@ -217,5 +216,5 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'gokyugook99@gmail.com'
 EMAIL_HOST_PASSWORD = 'mfoskafufbxramuz'
 
-# 사이트 도메인 설정 (비밀번호 재설정 등에 사용)
+# 사이트 도메인 설정
 SITE_DOMAIN = 'localhost:8080'
